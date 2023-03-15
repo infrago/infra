@@ -1,2 +1,2 @@
-# corn
-corn.go corn
+# infra
+infra.go infra
