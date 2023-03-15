@@ -126,10 +126,12 @@ func (module *engineModule) Method(name string, config Method) {
 	}
 
 	for _, key := range alias {
-		if _, ok := module.methods[key]; ok == false {
+		if infra.override() {
 			module.methods[key] = config
 		} else {
-			panic("[engine]Method已经存在了")
+			if _, ok := module.methods[key]; ok == false {
+				module.methods[key] = config
+			}
 		}
 	}
 }
@@ -473,7 +475,7 @@ func (module *engineModule) Arguments(name string, extends ...Vars) Vars {
 		//去集群找定义，待处理
 
 		//停用，因为注册路由的时候，集群还没有初始化，自然拿不到定义
-		// vvv, err := module.infra.Cluster.arguments(name)
+		// vvv, err := module.core.Cluster.arguments(name)
 		// if err == nil {
 		// 	args = vvv
 		// }

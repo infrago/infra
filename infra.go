@@ -20,7 +20,7 @@ var (
 			name: INFRA, role: INFRA, node: "", version: "",
 			secret: INFRA, salt: INFRA, setting: Map{},
 		},
-		runtime: infraRuntime{},
+		runtime: infraRuntime{override: true},
 		modules: make([]infraModule, 0),
 	}
 )
@@ -39,6 +39,8 @@ type (
 		modules []infraModule
 	}
 	infraRuntime struct {
+		override bool
+
 		// parsed
 		// 是否解析过了
 		parsed bool
@@ -106,6 +108,17 @@ type (
 		Terminate()
 	}
 )
+
+// 终止顺序需要和初始化顺序相反以保证各模块依赖
+func (this *infraKernel) override(args ...bool) bool {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+
+	if len(args) > 0 {
+		this.runtime.override = args[0]
+	}
+	return this.runtime.override
+}
 
 // setting 获取setting
 func (this *infraKernel) setting() Map {
@@ -353,7 +366,7 @@ func (this *infraKernel) launch() {
 
 	//这里是触发器
 	//待处理，而且异步要走携程池
-	// go infraTrigger.Toggle(START, nil)
+	go infraTrigger.Toggle(START)
 
 	this.runtime.launched = true
 
@@ -380,7 +393,7 @@ func (this *infraKernel) terminate() {
 
 	// 停止前触发器，同步
 	// 待处理 触发器
-	// infraTrigger.Toggle(STOP)
+	infraTrigger.SyncToggle(STOP)
 
 	//反向停止模块
 	for i := len(this.modules) - 1; i >= 0; i-- {

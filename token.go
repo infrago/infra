@@ -12,13 +12,15 @@ import (
 )
 
 var (
+	ErrInvalidToken = errors.New("Invalid token.")
+)
+
+var (
 	infraToken = &tokenModule{
 		config: tokenConfig{
 			Secret: "",
 		},
 	}
-
-	errInvalidToken = errors.New("Invalid token.")
 )
 
 type (
@@ -33,7 +35,7 @@ type (
 	// 	Begin int64  `json:"b,omitempty"`
 	// 	End   int64  `json:"e,omitempty"`
 	// 	Auth  bool   `json:"a,omitempty"`
-	// 	Role  bool   `json:"k,omitempty"`
+	// 	Role  bool   `json:"r,omitempty"`
 	// }
 
 	//for gob shorter
@@ -155,7 +157,7 @@ func (this *tokenModule) Verify(str string) (*Token, error) {
 
 	alls := strings.Split(str, ".")
 	if len(alls) != 3 {
-		return nil, errInvalidToken
+		return nil, ErrInvalidToken
 	}
 
 	header := alls[0]
@@ -235,7 +237,7 @@ func Sign(auth bool, payload Map, expires time.Duration, roles ...string) string
 	verify.Header.A = auth
 
 	if len(roles) > 0 {
-		// verify.Header.Kind = roles[0]
+		// verify.Header.Role = roles[0]
 		verify.Header.R = roles[0]
 	}
 

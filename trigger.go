@@ -13,13 +13,15 @@ const (
 )
 
 var (
+	ErrInvalidTrigger = errors.New("Invalid trigger.")
+)
+
+var (
 	infraTrigger = &triggerModule{
 		config:   triggerConfig{},
 		triggers: make(map[string][]Trigger, 0),
 		methods:  make(map[string][]string, 0),
 	}
-
-	errInvalidTrigger = errors.New("Invalid trigger.")
 )
 
 type (
@@ -114,7 +116,7 @@ func (this *triggerModule) Terminate() {
 }
 
 // ----------------------
-// 注意：这里infraCodec还没初始化，所有无法生成ID
+// 注意：这里mCodec还没初始化，所有无法生成ID
 // 需要放到 init中去处理
 func (this *triggerModule) Trigger(name string, config Trigger) {
 	if _, ok := this.triggers[name]; ok == false {
@@ -134,7 +136,18 @@ func (this *triggerModule) Toggle(name string, values ...Any) {
 		}
 	}
 }
+func (this *triggerModule) SyncToggle(name string, values ...Any) {
+	if ms, ok := this.methods[name]; ok {
+		for _, m := range ms {
+			Execute(m, values...)
+		}
+	}
+}
 
 func Toggle(name string, values ...Any) {
 	infraTrigger.Toggle(name, values...)
+}
+
+func SyncToggle(name string, values ...Any) {
+	infraTrigger.SyncToggle(name, values...)
 }

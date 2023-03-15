@@ -209,10 +209,12 @@ func (this *basicModule) Terminate() {
 
 // State 注册状态
 func (this *basicModule) State(name string, config State) {
-	if _, ok := this.states[name]; ok == false {
+	if infra.override() {
 		this.states[name] = config
 	} else {
-		panic("[baisc]State已经存在了")
+		if _, ok := this.states[name]; ok == false {
+			this.states[name] = config
+		}
 	}
 }
 func (this *basicModule) States(config States) {
@@ -254,11 +256,14 @@ func (this *basicModule) Language(name string, config Language) {
 		config.Strings = make(Strings, 0)
 	}
 
-	if _, ok := this.languages[name]; ok == false {
+	if infra.override() {
 		this.languages[name] = config
 	} else {
-		panic("[baisc]Language已经存在了")
+		if _, ok := this.languages[name]; ok == false {
+			this.languages[name] = config
+		}
 	}
+
 }
 
 func (this *basicModule) Strings(name string, config Strings) {
@@ -274,11 +279,12 @@ func (this *basicModule) Strings(name string, config Strings) {
 	if lang, ok := this.languages[name]; ok {
 		for key, str := range config {
 			key = strings.Replace(key, ".", "_", -1)
-
-			if _, ok := lang.Strings[key]; ok == false {
+			if infra.override() {
 				lang.Strings[key] = str
 			} else {
-				panic("[baisc]Language已经存在了")
+				if _, ok := lang.Strings[key]; ok == false {
+					lang.Strings[key] = str
+				}
 			}
 		}
 	}
@@ -334,10 +340,12 @@ func (this *basicModule) Mime(name string, config Mime) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
-	if _, ok := this.mimes[name]; ok == false {
+	if infra.override() {
 		this.mimes[name] = config
 	} else {
-		panic("[baisc]Mime已经存在了")
+		if _, ok := this.mimes[name]; ok == false {
+			this.mimes[name] = config
+		}
 	}
 }
 func (this *basicModule) Mimes(config Mimes) {
@@ -393,10 +401,12 @@ func (this *basicModule) Regular(name string, config Regular) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
-	if _, ok := this.regulars[name]; ok == false {
+	if infra.override() {
 		this.regulars[name] = config
 	} else {
-		panic("[baisc]Regular已经存在了")
+		if _, ok := this.regulars[name]; ok == false {
+			this.regulars[name] = config
+		}
 	}
 }
 func (this *basicModule) Regulars(config Regulars) {
@@ -439,10 +449,12 @@ func (this *basicModule) Type(name string, config Type) {
 	}
 
 	for _, key := range alias {
-		if _, ok := this.types[key]; ok == false {
+		if infra.override() {
 			this.types[key] = config
 		} else {
-			panic("[baisc]Type已经存在了")
+			if _, ok := this.types[key]; ok == false {
+				this.types[key] = config
+			}
 		}
 	}
 

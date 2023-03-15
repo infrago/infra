@@ -183,10 +183,12 @@ func (this *codecModule) Codec(name string, config Codec) {
 	}
 
 	for _, key := range alias {
-		if _, ok := this.codecs[key]; ok == false {
+		if infra.override() {
 			this.codecs[key] = config
 		} else {
-			panic("[codec]已经存在")
+			if _, ok := this.codecs[key]; ok == false {
+				this.codecs[key] = config
+			}
 		}
 	}
 

@@ -13,6 +13,11 @@ func init() {
 	Register(infraToken)
 }
 
+// Override
+func Override(args ...bool) bool {
+	return infra.override(args...)
+}
+
 // Register 注册各种内容
 func Register(cfgs ...Any) {
 	infra.register(cfgs...)
