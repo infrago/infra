@@ -17,8 +17,8 @@ import (
 var (
 	infra = &infraKernel{
 		config: infraConfig{
-			name: INFRAGO, role: INFRAGO, node: "", version: "",
-			secret: INFRAGO, salt: INFRAGO, setting: Map{},
+			name: INFRA, role: INFRA, node: "", version: "",
+			secret: INFRA, salt: INFRA, setting: Map{},
 		},
 		runtime: infraRuntime{},
 		modules: make([]infraModule, 0),
@@ -136,8 +136,8 @@ func (this *infraKernel) loading(mod infraModule) {
 // 动态参数，以支持以下几种可能性
 // 并且此方法兼容configure，为各模块加载默认配置
 // (string,any) 包括name的注册
-// (any)	不包括name的注册
-// (anys)	批量注册多个
+// (any)    不包括name的注册
+// (anys)    批量注册多个
 func (this *infraKernel) register(args ...Any) {
 	name := ""
 	loads := make([]Any, 0)
@@ -190,21 +190,21 @@ func (this *infraKernel) parse() {
 	// 2读命令行参数
 	// // 参数大于2个，就解析参数
 	// if len(args) > 2 {
-	// 	var name string
-	// 	var node string
-	// 	var bind string
-	// 	var key string
-	// 	var tags []string
-	// 	var join []string
+	//     var name string
+	//     var node string
+	//     var bind string
+	//     var key string
+	//     var tags []string
+	//     var join []string
 
-	// 	flag.StringVar(&name, "name", "chef", "cluster name")
-	// 	flag.StringVar(&node, "node", "test", "node name")
-	// 	flag.StringVar(&bind, "bind", "0.0.0.0:3000", "address to bind listeners to")
-	// 	flag.StringVar(&key, "key", "", "encryption key")
-	// 	flag.Var((*flagSlice)(&tags), "tag", "tag pair, specified as key=value")
-	// 	flag.Var((*flagSlice)(&join), "join", "address of agent to join on startup")
+	//     flag.StringVar(&name, "name", "infra", "cluster name")
+	//     flag.StringVar(&node, "node", "test", "node name")
+	//     flag.StringVar(&bind, "bind", "0.0.0.0:3000", "address to bind listeners to")
+	//     flag.StringVar(&key, "key", "", "encryption key")
+	//     flag.Var((*flagSlice)(&tags), "tag", "tag pair, specified as key=value")
+	//     flag.Var((*flagSlice)(&join), "join", "address of agent to join on startup")
 
-	// 	flag.Parse()
+	//     flag.Parse()
 
 	// }
 
@@ -353,7 +353,7 @@ func (this *infraKernel) launch() {
 
 	//这里是触发器
 	//待处理，而且异步要走携程池
-	// go mTrigger.Toggle(START, nil)
+	// go infraTrigger.Toggle(START, nil)
 
 	this.runtime.launched = true
 
@@ -380,7 +380,7 @@ func (this *infraKernel) terminate() {
 
 	// 停止前触发器，同步
 	// 待处理 触发器
-	// mTrigger.Toggle(STOP)
+	// infraTrigger.Toggle(STOP)
 
 	//反向停止模块
 	for i := len(this.modules) - 1; i >= 0; i-- {

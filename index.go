@@ -4,11 +4,18 @@ import (
 	. "github.com/infrago/base"
 )
 
-// Register
-// 注册各种内容
+func init() {
+	Register(infraBridge)
+	Register(infraBasic)
+	Register(infraCodec)
+	Register(infraEngine)
+	Register(infraTrigger)
+	Register(infraToken)
+}
 
-func Register(args ...Any) {
-	infra.register(args...)
+// Register 注册各种内容
+func Register(cfgs ...Any) {
+	infra.register(cfgs...)
 }
 
 // Identify 声明当前节点的身份和版本
@@ -21,12 +28,10 @@ func Identify(role string, versions ...string) {
 // Configure 开放修改默认配置
 // 比如，在代码中就可以设置一些默认配置
 // 这样就可以最大化的减少配置文件的依赖
-func Configure(config Map) {
-	infra.configure(config)
+func Configure(cfg Map) {
+	infra.configure(cfg)
 }
 
-// Setting
-// 返回全局设置
 func Setting() Map {
 	return infra.setting()
 }
