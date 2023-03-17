@@ -15,30 +15,30 @@ import (
 )
 
 var (
-	infra = &infraKernel{
-		config: infraConfig{
+	infra = &kernel{
+		config: kernelConfig{
 			name: INFRA, role: INFRA, node: "", version: "",
 			secret: INFRA, salt: INFRA, setting: Map{},
 		},
-		runtime: infraRuntime{override: true},
+		runtime: kernelRuntime{override: true},
 		modules: make([]infraModule, 0),
 	}
 )
 
 type (
-	infraKernel struct {
+	kernel struct {
 		// mutex 读写锁
 		mutex sync.RWMutex
 		// config infra配置
-		config infraConfig
+		config kernelConfig
 		// runtime 运行时
 		// 记录运行状态
-		runtime infraRuntime
+		runtime kernelRuntime
 		// modules 模块
 		// 记录加载的模块列表
 		modules []infraModule
 	}
-	infraRuntime struct {
+	kernelRuntime struct {
 		override bool
 
 		// parsed
@@ -57,7 +57,7 @@ type (
 		// 是否已运行
 		launched bool
 	}
-	infraConfig struct {
+	kernelConfig struct {
 		// name 项目名称
 		name string
 
@@ -110,7 +110,7 @@ type (
 )
 
 // 终止顺序需要和初始化顺序相反以保证各模块依赖
-func (this *infraKernel) override(args ...bool) bool {
+func (this *kernel) override(args ...bool) bool {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
@@ -121,7 +121,7 @@ func (this *infraKernel) override(args ...bool) bool {
 }
 
 // setting 获取setting
-func (this *infraKernel) setting() Map {
+func (this *kernel) setting() Map {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
 
@@ -131,7 +131,7 @@ func (this *infraKernel) setting() Map {
 
 // loading 装载模块
 // 遍历所有已经注册过的模块，避免重复注册
-func (this *infraKernel) loading(mod infraModule) {
+func (this *kernel) loading(mod infraModule) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
@@ -151,7 +151,7 @@ func (this *infraKernel) loading(mod infraModule) {
 // (string,any) 包括name的注册
 // (any)    不包括name的注册
 // (anys)    批量注册多个
-func (this *infraKernel) register(args ...Any) {
+func (this *kernel) register(args ...Any) {
 	name := ""
 	loads := make([]Any, 0)
 
@@ -187,7 +187,7 @@ func (this *infraKernel) register(args ...Any) {
 // 3 环境变量，就像命令行参数一样，整个传过来
 // 主要是方便在docker中启动，或是其它容器
 // 以上功能待处理
-func (this *infraKernel) parse() {
+func (this *kernel) parse() {
 	if this.runtime.parsed {
 		return
 	}
@@ -263,7 +263,7 @@ func (this *infraKernel) parse() {
 // version 编译的版本，建议每次发布时更新版本
 // 通常在一个项目中会有多个不同模块（角色），每个模块可能会运行N个节点
 // 在集群中标明当前节点的角色和版本，方便管理集群
-func (this *infraKernel) identify(role string, versions ...string) {
+func (this *kernel) identify(role string, versions ...string) {
 	this.config.role = role
 	if len(versions) > 0 {
 		this.config.version = versions[0]
@@ -273,7 +273,7 @@ func (this *infraKernel) identify(role string, versions ...string) {
 // configure 为所有模块加载配置
 // 此方法有可能会被多次调用，解析文件后可调用
 // 从配置中心获取到配置后，也会调用
-func (this *infraKernel) configure(args ...Map) {
+func (this *kernel) configure(args ...Map) {
 	config := Map{}
 	if len(args) > 0 {
 		config = args[0]
@@ -333,7 +333,7 @@ func (this *infraKernel) configure(args ...Map) {
 }
 
 // initialize 初始化所有模块
-func (this *infraKernel) initialize() {
+func (this *kernel) initialize() {
 	if this.runtime.initialized {
 		return
 	}
@@ -344,7 +344,7 @@ func (this *infraKernel) initialize() {
 }
 
 // connect
-func (this *infraKernel) connect() {
+func (this *kernel) connect() {
 	if this.runtime.connected {
 		return
 	}
@@ -356,7 +356,7 @@ func (this *infraKernel) connect() {
 
 // launch 启动所有模块
 // 只有部分模块是需要启动的，比如HTTP
-func (this *infraKernel) launch() {
+func (this *kernel) launch() {
 	if this.runtime.launched {
 		return
 	}
@@ -379,7 +379,7 @@ func (this *infraKernel) launch() {
 
 // waiting 等待系统退出信号
 // 为了程序做好退出前的善后工作，优雅的退出程序
-func (this *infraKernel) waiting() {
+func (this *kernel) waiting() {
 	// 待处理，加入自己的退出信号
 	// 并开放 infra.Stop() 给外部调用
 	waiter := make(chan os.Signal, 1)
@@ -389,7 +389,7 @@ func (this *infraKernel) waiting() {
 
 // terminate 终止结束所有模块
 // 终止顺序需要和初始化顺序相反以保证各模块依赖
-func (this *infraKernel) terminate() {
+func (this *kernel) terminate() {
 
 	// 停止前触发器，同步
 	// 待处理 触发器
