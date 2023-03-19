@@ -94,7 +94,7 @@ func (module *codecModule) Register(name string, value Any) {
 	case Codec:
 		module.Codec(name, val)
 		// case Crypto:
-		// 	infraCodec.Crypto(key, val, overrides...)
+		// 	infraCodec.Crypto(key, val)
 	}
 
 	// fmt.Println("codec registered", name)
