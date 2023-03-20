@@ -12,7 +12,7 @@ func init() {
 	Register(infraTrigger)
 	Register(infraToken)
 
-	builtin()
+	// builtin()
 }
 
 // Override
