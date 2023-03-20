@@ -93,8 +93,6 @@ type (
 	TypeValueFunc func(Any, Var) Any
 )
 
-func (this *basicModule) Builtin() {
-}
 func (this *basicModule) Register(name string, value Any) {
 	switch val := value.(type) {
 	case Language:
@@ -151,6 +149,7 @@ func (this *basicModule) langConfigure(name string, config Map) {
 	this.languages[name] = lang
 }
 
+// 多语言配置，待处理
 func (this *basicModule) Configure(value Map) {
 	// if cfg, ok := value.(map[string]langConfig); ok {
 	// 	this.langConfigs = cfg

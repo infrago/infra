@@ -160,7 +160,6 @@ func (module *codecModule) Configure(global Map) {
 
 func (this *codecModule) Initialize() {
 	this.fastid = util.NewFastID(infraCodec.config.Timebits, infraCodec.config.Nodebits, infraCodec.config.Stepbits, infraCodec.config.Start.Unix())
-	// fmt.Println("codec initialized")
 }
 func (module *codecModule) Connect() {
 }
