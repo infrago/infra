@@ -11,8 +11,6 @@ func init() {
 	Register(infraEngine)
 	Register(infraTrigger)
 	Register(infraToken)
-
-	// builtin()
 }
 
 // Override
