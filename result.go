@@ -73,13 +73,8 @@ func (res *result) With(args ...Any) Res {
 	return res
 }
 
-// Error 返回Res的信息以符合error接口的定义
+// Error
 func (res *result) Error() string {
-	return res.String()
-}
-
-// Retry
-func (res *result) String() string {
 	if res == nil {
 		return ""
 	}
