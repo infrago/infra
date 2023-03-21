@@ -5,12 +5,12 @@ import (
 )
 
 func init() {
-	Register(infraBridge)
-	Register(infraBasic)
-	Register(infraCodec)
-	Register(infraEngine)
-	Register(infraTrigger)
-	Register(infraToken)
+	Mount(infraBridge)
+	Mount(infraBasic)
+	Mount(infraCodec)
+	Mount(infraEngine)
+	Mount(infraTrigger)
+	Mount(infraToken)
 }
 
 // Override

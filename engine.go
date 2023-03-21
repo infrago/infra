@@ -84,12 +84,12 @@ type (
 )
 
 // Register
-func (module *engineModule) Register(key string, value Any) {
-	switch val := value.(type) {
+func (module *engineModule) Register(o Object) {
+	switch val := o.Object.(type) {
 	case Method:
-		module.Method(key, val)
+		module.Method(o.Name, val)
 	case Service:
-		module.Service(key, val)
+		module.Service(o.Name, val)
 	}
 }
 
