@@ -15,36 +15,35 @@ type (
 
 //------------ group ----------------
 
-func (lib *group) Name() string {
-	return lib.name
+func (this *group) Name() string {
+	return this.name
 }
-func (lib *group) Register(name string, value Any) {
-	//20221230全部加前缀，不管是不是头重复
-	// if lib.name != "" && !strings.HasPrefix(name, prefix) {
-	if lib.name != "" {
-		prefix := lib.name + "."
-		if strings.HasPrefix(name, ".") {
-			prefix = lib.name
+func (this *group) Register(args ...Any) {
+	values := make([]Any, 0)
+	for _, arg := range args {
+		if ss, ok := arg.(string); ok {
+			prefix := this.name + "."
+			if strings.HasPrefix(ss, ".") {
+				prefix = this.name
+			}
+			values = append(values, prefix+ss)
+		} else {
+			values = append(values, arg)
 		}
-
-		name = prefix + name
 	}
 
-	args := make([]Any, 0)
-	args = append(args, name, value)
-
-	Register(args...)
+	Register(values...)
 }
 
-func (lib *group) Result(ok bool, state string, text string) Res {
+func (this *group) Result(ok bool, state string, text string) Res {
 	code := 0
 	if ok == false {
-		code = lib.base
-		lib.base++
+		code = this.base
+		this.base++
 	}
 
-	if lib.name != "" && !strings.HasPrefix(state, lib.name+".") {
-		state = lib.name + "." + state
+	if this.name != "" && !strings.HasPrefix(state, this.name+".") {
+		state = this.name + "." + state
 	}
 	return Result(code, state, text)
 }

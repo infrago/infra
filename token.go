@@ -59,8 +59,8 @@ type (
 )
 
 // Register
-func (module *tokenModule) Register(name string, value Any) {
-	// switch val := value.(type) {
+func (module *tokenModule) Register(o Object) {
+	// switch val := o.Object.(type) {
 	// // case What:
 	// }
 }

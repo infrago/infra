@@ -93,26 +93,26 @@ type (
 	TypeValueFunc func(Any, Var) Any
 )
 
-func (this *basicModule) Register(name string, value Any) {
-	switch val := value.(type) {
+func (this *basicModule) Register(o Object) {
+	switch val := o.Object.(type) {
 	case Language:
-		this.Language(name, val)
+		this.Language(o.Name, val)
 	case Strings:
-		this.Strings(name, val)
+		this.Strings(o.Name, val)
 	case State:
-		this.State(name, val)
+		this.State(o.Name, val)
 	case States:
 		this.States(val)
 	case Mime:
-		this.Mime(name, val)
+		this.Mime(o.Name, val)
 	case Mimes:
 		this.Mimes(val)
 	case Regular:
-		this.Regular(name, val)
+		this.Regular(o.Name, val)
 	case Regulars:
 		this.Regulars(val)
 	case Type:
-		this.Type(name, val)
+		this.Type(o.Name, val)
 	}
 }
 

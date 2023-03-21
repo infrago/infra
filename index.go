@@ -18,6 +18,10 @@ func Override(args ...bool) bool {
 	return infra.override(args...)
 }
 
+func Mount(m infraModule) {
+	infra.mount(m)
+}
+
 // Register 注册各种内容
 func Register(cfgs ...Any) {
 	infra.register(cfgs...)

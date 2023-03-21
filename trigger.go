@@ -50,10 +50,10 @@ type (
 )
 
 // Register
-func (this *triggerModule) Register(name string, value Any) {
-	switch val := value.(type) {
+func (this *triggerModule) Register(o Object) {
+	switch val := o.Object.(type) {
 	case Trigger:
-		this.Trigger(name, val)
+		this.Trigger(o.Name, val)
 	}
 }
 

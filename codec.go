@@ -89,15 +89,11 @@ type (
 )
 
 // Register
-func (module *codecModule) Register(name string, value Any) {
-	switch val := value.(type) {
+func (module *codecModule) Register(o Object) {
+	switch val := o.Object.(type) {
 	case Codec:
-		module.Codec(name, val)
-		// case Crypto:
-		// 	infraCodec.Crypto(key, val)
+		module.Codec(o.Name, val)
 	}
-
-	// fmt.Println("codec registered", name)
 }
 
 // Configure

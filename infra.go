@@ -87,10 +87,15 @@ type (
 		// 实际业务代码中一般需要用的配置
 		setting Map
 	}
+	// Object 注册的对象
+	Object struct {
+		Name   string
+		Object Any
+	}
+
 	infraModule interface {
 		// Register 注册
-		// 注册模块或组件
-		Register(name string, value Any)
+		Register(Object)
 
 		// Configure 配置
 		Configure(Map)
@@ -129,9 +134,9 @@ func (this *kernel) setting() Map {
 	return util.DeepMapping(this.config.setting)
 }
 
-// loading 装载模块
+// mount 装载模块
 // 遍历所有已经注册过的模块，避免重复注册
-func (this *kernel) loading(mod infraModule) {
+func (this *kernel) mount(mod infraModule) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
@@ -170,11 +175,11 @@ func (this *kernel) register(args ...Any) {
 			this.configure(mmm)
 		} else if mod, ok := load.(infraModule); ok {
 			// 兼容所有模块的配置注册
-			this.loading(mod)
+			this.mount(mod)
 		} else {
 			//下发到各个模块中注册
 			for _, mod := range this.modules {
-				mod.Register(name, load)
+				mod.Register(Object{name, load})
 			}
 		}
 	}

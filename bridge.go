@@ -43,8 +43,8 @@ type (
 )
 
 // Register
-func (this *bridgeModule) Register(name string, value Any) {
-	switch val := value.(type) {
+func (this *bridgeModule) Register(o Object) {
+	switch val := o.Object.(type) {
 	case BusBridge:
 		this.bus = val
 	case logBridge:
