@@ -15,7 +15,7 @@ const (
 
 const (
 	INFRA   = "infra"
-	INFRAGO = "infra.go"
+	INFRAGO = "infra.Go"
 
 	DEFAULT = "default"
 

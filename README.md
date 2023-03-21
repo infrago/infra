@@ -1,2 +1,2 @@
 # infra
-infra.go infra
+infra.Go infra
