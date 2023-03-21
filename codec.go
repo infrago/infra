@@ -89,10 +89,10 @@ type (
 )
 
 // Register
-func (module *codecModule) Register(o Object) {
-	switch val := o.Object.(type) {
+func (module *codecModule) Register(name string, value Any) {
+	switch val := value.(type) {
 	case Codec:
-		module.Codec(o.Name, val)
+		module.Codec(name, val)
 	}
 }
 

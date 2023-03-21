@@ -74,10 +74,10 @@ func (this *configModule) Adsasdf(name string, value Any) {
 	}
 }
 
-func (this *configModule) Register(o Object) {
-	switch val := o.Object.(type) {
+func (this *configModule) Register(name string, value Any) {
+	switch val := value.(type) {
 	case Configurator:
-		this.Configurator(o.Name, val)
+		this.Configurator(name, val)
 	}
 }
 

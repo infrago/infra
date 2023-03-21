@@ -87,15 +87,9 @@ type (
 		// 实际业务代码中一般需要用的配置
 		setting Map
 	}
-	// Object 注册的对象
-	Object struct {
-		Name   string
-		Object Any
-	}
-
 	infraModule interface {
 		// Register 注册
-		Register(Object)
+		Register(string, Any)
 
 		// Configure 配置
 		Configure(Map)
@@ -158,28 +152,25 @@ func (this *kernel) mount(mod infraModule) {
 // (anys)    批量注册多个
 func (this *kernel) register(args ...Any) {
 	name := ""
-	loads := make([]Any, 0)
+	values := make([]Any, 0)
 
 	for _, arg := range args {
 		switch vvv := arg.(type) {
 		case string:
 			name = vvv
 		default:
-			loads = append(loads, vvv)
+			values = append(values, vvv)
 		}
 	}
 
-	for _, load := range loads {
-		if mmm, ok := load.(Map); ok {
+	for _, value := range values {
+		if mmm, ok := value.(Map); ok {
 			// 兼容所有模块的配置注册
 			this.configure(mmm)
-		} else if mod, ok := load.(infraModule); ok {
-			// 兼容所有模块的配置注册
-			this.mount(mod)
 		} else {
 			//下发到各个模块中注册
 			for _, mod := range this.modules {
-				mod.Register(Object{name, load})
+				mod.Register(name, value)
 			}
 		}
 	}
