@@ -371,9 +371,9 @@ func (this *kernel) launch() {
 	this.runtime.launched = true
 
 	if this.config.name == this.config.role || this.config.role == "" {
-		log.Println(fmt.Sprintf("%s %s-%s is running", INFRAGO, this.config.name, this.config.node))
+		log.Println(fmt.Sprintf("%s %s-%s started.", INFRAGO, this.config.name, this.config.node))
 	} else {
-		log.Println(fmt.Sprintf("%s %s-%s-%s is running", INFRAGO, this.config.name, this.config.role, this.config.node))
+		log.Println(fmt.Sprintf("%s %s-%s-%s started.", INFRAGO, this.config.name, this.config.role, this.config.node))
 	}
 }
 
@@ -403,8 +403,8 @@ func (this *kernel) terminate() {
 	this.runtime.launched = false
 
 	if this.config.name == this.config.role || this.config.role == "" {
-		log.Println(fmt.Sprintf("%s %s-%s is stopped", INFRAGO, this.config.name, this.config.node))
+		log.Println(fmt.Sprintf("%s %s-%s stopped", INFRAGO, this.config.name, this.config.node))
 	} else {
-		log.Println(fmt.Sprintf("%s %s-%s-%s is stopped", INFRAGO, this.config.name, this.config.role, this.config.node))
+		log.Println(fmt.Sprintf("%s %s-%s-%s stopped", INFRAGO, this.config.name, this.config.role, this.config.node))
 	}
 }
