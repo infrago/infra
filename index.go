@@ -18,7 +18,7 @@ func Override(args ...bool) bool {
 	return infra.override(args...)
 }
 
-func Mount(m infraModule) {
+func Mount(m Interface) {
 	infra.mount(m)
 }
 

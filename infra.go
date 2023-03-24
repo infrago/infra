@@ -16,29 +16,38 @@ import (
 
 var (
 	infra = &kernel{
-		config: kernelConfig{
+		config: config{
 			name: INFRA, role: INFRA, node: "", version: "",
 			secret: INFRA, salt: INFRA, setting: Map{},
 		},
-		runtime: kernelRuntime{override: true},
-		modules: make([]infraModule, 0),
+		runtime: runtime{override: true},
+		modules: make([]Interface, 0),
 	}
 )
 
 type (
+	Interface interface {
+		Register(string, Any)
+		Configure(Map)
+		Initialize()
+		Connect()
+		Launch()
+		Terminate()
+	}
+
 	kernel struct {
 		// mutex 读写锁
 		mutex sync.RWMutex
 		// config infra配置
-		config kernelConfig
+		config config
 		// runtime 运行时
 		// 记录运行状态
-		runtime kernelRuntime
+		runtime runtime
 		// modules 模块
 		// 记录加载的模块列表
-		modules []infraModule
+		modules []Interface
 	}
-	kernelRuntime struct {
+	runtime struct {
 		override bool
 
 		// parsed
@@ -57,7 +66,7 @@ type (
 		// 是否已运行
 		launched bool
 	}
-	kernelConfig struct {
+	config struct {
 		// name 项目名称
 		name string
 
@@ -87,25 +96,6 @@ type (
 		// 实际业务代码中一般需要用的配置
 		setting Map
 	}
-	infraModule interface {
-		// Register 注册
-		Register(string, Any)
-
-		// Configure 配置
-		Configure(Map)
-
-		// Initialize 初始化
-		Initialize()
-
-		// Connect 连接驱动
-		Connect()
-
-		// Launch 启动
-		Launch()
-
-		// Terminate 终止
-		Terminate()
-	}
 )
 
 // 终止顺序需要和初始化顺序相反以保证各模块依赖
@@ -130,7 +120,7 @@ func (this *kernel) setting() Map {
 
 // mount 装载模块
 // 遍历所有已经注册过的模块，避免重复注册
-func (this *kernel) mount(mod infraModule) {
+func (this *kernel) mount(mod Interface) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
