@@ -565,8 +565,6 @@ func (this *basicModule) Mapping(config Vars, data Map, value Map, argn bool, pa
 		//fmt.Printf("trees=%v, must=%v, empty=%v, exist=%v, auto=%v, value=%v, config=%v\n\n",
 		//	strings.Join(trees, "."), fieldMust, fieldEmpty, fieldExist, fieldAuto, fieldValue, fieldConfig)
 
-		//fmt.Println("mapping", fieldName)
-
 		strVal := fmt.Sprintf("%v", fieldValue)
 
 		//等一下。 空的map[]无字段。 需要也表示为空吗?

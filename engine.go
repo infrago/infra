@@ -360,11 +360,6 @@ func (module *engineModule) Invokes(meta *Meta, name string, value Map, settings
 	data, res, _ := module.Call(meta, name, value, settings...)
 
 	if data != nil {
-
-		// if name == "share.GetTerminalHolders" {
-		// 	fmt.Println("eng.Invokes", tttt, data)
-		// }
-
 		if results, ok := data["items"].([]Map); ok {
 			return results, res
 		} else if results, ok := data["items"].([]Any); ok {
