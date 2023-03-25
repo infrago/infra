@@ -67,13 +67,6 @@ func (this *configModule) Configurator(name string, config Configurator) {
 	}
 }
 
-func (this *configModule) Adsasdf(name string, value Any) {
-	switch val := value.(type) {
-	case Configurator:
-		this.Configurator(name, val)
-	}
-}
-
 func (this *configModule) Register(name string, value Any) {
 	switch val := value.(type) {
 	case Configurator:
