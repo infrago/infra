@@ -234,7 +234,6 @@ func (this *kernel) parse() {
 			if err == nil {
 				// 加载配置，并中断循环，只读取第一个读到的文件
 				config, err := util.ParseTOML(string(bytes))
-				fmt.Println("xxx", config)
 				if err == nil {
 					this.configure(config)
 					break
