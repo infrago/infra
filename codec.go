@@ -3,6 +3,7 @@ package infra
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,9 +19,9 @@ var (
 			Digit: "abcdefghijkmnpqrstuvwxyz123456789ACDEFGHJKLMNPQRSTUVWXYZ",
 			Salt:  INFRA, Length: 7,
 
-			Start:    time.Date(2022, 5, 1, 0, 0, 0, 0, time.Local),
+			Start:    time.Date(2023, 4, 1, 0, 0, 0, 0, time.Local),
 			Timebits: 42, Nodebits: 7, Stepbits: 14,
-			// 42bit=128年
+			// 42bit=128年, 7=128, 14bit=16384
 		},
 		codecs: make(map[string]Codec, 0),
 	}
@@ -203,18 +204,22 @@ func (module *codecModule) Sequence() int64 {
 	return infraCodec.fastid.NextID()
 }
 
-// Unique 雪花ID 转数字加密
+// Unique 雪花ID 转36进制
 func (module *codecModule) Generate(prefixs ...string) string {
 	id := infraCodec.Sequence()
-	ss, err := module.EncryptDIGIT(id)
-	if err != nil {
-		return fmt.Sprintf("%v", id)
-	}
-	if len(prefixs) > 0 {
-		return fmt.Sprintf("%s%s", prefixs[0], ss)
-	} else {
-		return ss
-	}
+	return strconv.FormatInt(id, 36)
+
+	//yxA7JrRJrK7PM vs pj37vbgfqiqa
+
+	// ss, err := module.EncryptDIGIT(id)
+	// if err != nil {
+	// 	return fmt.Sprintf("%v", id)
+	// }
+	// if len(prefixs) > 0 {
+	// 	return fmt.Sprintf("%s%s", prefixs[0], ss)
+	// } else {
+	// 	return ss
+	// }
 }
 
 // Encode 原始的编码
