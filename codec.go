@@ -207,9 +207,10 @@ func (module *codecModule) Sequence() int64 {
 // Unique 雪花ID 转36进制
 func (module *codecModule) Generate(prefixs ...string) string {
 	id := infraCodec.Sequence()
-	return strconv.FormatInt(id, 36)
+	return strconv.FormatInt(id, 16)
 
-	//yxA7JrRJrK7PM vs pj37vbgfqiqa
+	//hashids vs base36 vs base16
+	//yxA7JrRJrK7PM vs pj37vbgfqiqa vs 2ea53ac1e0e00052
 
 	// ss, err := module.EncryptDIGIT(id)
 	// if err != nil {
