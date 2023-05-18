@@ -69,20 +69,20 @@ func (this *triggerModule) Configure(global Map) {
 	// }
 
 	// //默认过期时间，单位秒
-	// if expiry, ok := config["expiry"].(string); ok {
-	// 	dur, err := util.ParseDuration(expiry)
+	// if expire, ok := config["expire"].(string); ok {
+	// 	dur, err := util.ParseDuration(expire)
 	// 	if err == nil {
-	// 		this.config.Expiry = dur
+	// 		this.config.Expire = dur
 	// 	}
 	// }
-	// if expiry, ok := config["expiry"].(int); ok {
-	// 	this.config.Expiry = time.Second * time.Duration(expiry)
+	// if expire, ok := config["expire"].(int); ok {
+	// 	this.config.Expire = time.Second * time.Duration(expire)
 	// }
-	// if expiry, ok := config["expiry"].(int64); ok {
-	// 	this.config.Expiry = time.Second * time.Duration(expiry)
+	// if expire, ok := config["expire"].(int64); ok {
+	// 	this.config.Expire = time.Second * time.Duration(expire)
 	// }
-	// if expiry, ok := config["expiry"].(float64); ok {
-	// 	this.config.Expiry = time.Second * time.Duration(expiry)
+	// if expire, ok := config["expire"].(float64); ok {
+	// 	this.config.Expire = time.Second * time.Duration(expire)
 	// }
 }
 
