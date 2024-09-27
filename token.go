@@ -48,8 +48,8 @@ type (
 	}
 
 	Token struct {
-		Header  tH
-		Payload Map
+		Header  tH  `json:"h,omitempty"`
+		Payload Map `json:"p,omitempty"`
 	}
 
 	tokenModule struct {
@@ -125,7 +125,7 @@ func (this *tokenModule) Sign(token *Token) (string, error) {
 	if vv, err := infraCodec.MarshalJSON(token.Header); err != nil {
 		return "", err
 	} else {
-		if vvs, err := infraCodec.Encrypt(TEXT, vv); err != nil {
+		if vvs, err := infraCodec.Encrypt(TEXT, string(vv)); err != nil {
 			return "", err
 		} else {
 			header = vvs

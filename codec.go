@@ -37,7 +37,7 @@ const (
 	DIGIT  = "digit"
 	DIGITS = "digits"
 	TEXT   = "text"
-	TEXTS  = "text"
+	TEXTS  = "texts"
 )
 
 type (
