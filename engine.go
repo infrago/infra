@@ -632,12 +632,14 @@ func Arguments(name string, extends ...Vars) Vars {
 }
 
 // 直接执行，同步，本地
-func Execute(name string, values ...Any) (Map, Res) {
+// 20250724，为什么values要用any类型，不记得原因了
+func Execute(name string, values ...Map) (Map, Res) {
 	var value Map
 	if len(values) > 0 {
-		if vv, ok := values[0].(Map); ok {
-			value = vv
-		}
+		value = values[0]
+		// if vv, ok := values[0].(Map); ok {
+		// 	value = vv
+		// }
 	}
 	return infraEngine.Execute(nil, name, value)
 }

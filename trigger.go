@@ -129,14 +129,14 @@ func (this *triggerModule) Trigger(name string, config Trigger) {
 
 // ------------------------- 方法 ----------------------------
 // 触发
-func (this *triggerModule) Toggle(name string, values ...Any) {
+func (this *triggerModule) Toggle(name string, values ...Map) {
 	if ms, ok := this.methods[name]; ok {
 		for _, m := range ms {
 			go Execute(m, values...)
 		}
 	}
 }
-func (this *triggerModule) SyncToggle(name string, values ...Any) {
+func (this *triggerModule) SyncToggle(name string, values ...Map) {
 	if ms, ok := this.methods[name]; ok {
 		for _, m := range ms {
 			Execute(m, values...)
@@ -144,10 +144,10 @@ func (this *triggerModule) SyncToggle(name string, values ...Any) {
 	}
 }
 
-func Toggle(name string, values ...Any) {
+func Toggle(name string, values ...Map) {
 	infraTrigger.Toggle(name, values...)
 }
 
-func SyncToggle(name string, values ...Any) {
+func SyncToggle(name string, values ...Map) {
 	infraTrigger.SyncToggle(name, values...)
 }
