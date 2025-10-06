@@ -587,7 +587,7 @@ func (this *basicModule) Mapping(config Vars, data Map, value Map, argn bool, pa
 					return fieldConfig.Empty
 				} else {
 
-					return varEmpty.With(fieldName)
+					return varEmpty.With(fieldConfig.Name)
 
 					// //这样方便在多语言环境使用
 					// key := "_mapping_empty_" + fieldName
@@ -821,7 +821,7 @@ func (this *basicModule) Mapping(config Vars, data Map, value Map, argn bool, pa
 									return fieldConfig.Error
 								} else {
 
-									return varError.With(fieldName)
+									return varError.With(fieldConfig.Name)
 
 									// //这样方便在多语言环境使用
 									// key := "_mapping_error_" + fieldName

@@ -20,7 +20,7 @@ var (
 			name: INFRA, role: INFRA, node: "", version: "",
 			secret: INFRA, salt: INFRA, setting: Map{},
 		},
-		runtime: runtime{override: true},
+		process: process{override: true},
 		modules: make([]Interface, 0),
 	}
 )
@@ -40,14 +40,14 @@ type (
 		mutex sync.RWMutex
 		// config infra配置
 		config config
-		// runtime 运行时
+		// process 进程状态
 		// 记录运行状态
-		runtime runtime
+		process process
 		// modules 模块
 		// 记录加载的模块列表
 		modules []Interface
 	}
-	runtime struct {
+	process struct {
 		override bool
 
 		// parsed
@@ -104,9 +104,9 @@ func (this *kernel) override(args ...bool) bool {
 	defer this.mutex.Unlock()
 
 	if len(args) > 0 {
-		this.runtime.override = args[0]
+		this.process.override = args[0]
 	}
-	return this.runtime.override
+	return this.process.override
 }
 
 // setting 获取setting
@@ -174,7 +174,7 @@ func (this *kernel) register(args ...Any) {
 // 主要是方便在docker中启动，或是其它容器
 // 以上功能待处理
 func (this *kernel) parse() {
-	if this.runtime.parsed {
+	if this.process.parsed {
 		return
 	}
 
@@ -268,7 +268,7 @@ func (this *kernel) configure(args ...Map) {
 	}
 
 	// 如果已经初始化就不让修改了
-	if this.runtime.initialized || this.runtime.launched {
+	if this.process.initialized || this.process.launched {
 		return
 	}
 
@@ -322,30 +322,30 @@ func (this *kernel) configure(args ...Map) {
 
 // initialize 初始化所有模块
 func (this *kernel) initialize() {
-	if this.runtime.initialized {
+	if this.process.initialized {
 		return
 	}
 	for _, mod := range this.modules {
 		mod.Initialize()
 	}
-	this.runtime.initialized = true
+	this.process.initialized = true
 }
 
 // connect
 func (this *kernel) connect() {
-	if this.runtime.connected {
+	if this.process.connected {
 		return
 	}
 	for _, mod := range this.modules {
 		mod.Connect()
 	}
-	this.runtime.connected = true
+	this.process.connected = true
 }
 
 // launch 启动所有模块
 // 只有部分模块是需要启动的，比如HTTP
 func (this *kernel) launch() {
-	if this.runtime.launched {
+	if this.process.launched {
 		return
 	}
 	for _, mod := range this.modules {
@@ -356,7 +356,7 @@ func (this *kernel) launch() {
 	//待处理，而且异步要走携程池
 	go infraTrigger.Toggle(START)
 
-	this.runtime.launched = true
+	this.process.launched = true
 
 	if this.config.name == this.config.role || this.config.role == "" {
 		log.Println(fmt.Sprintf("%s %s-%s started.", INFRAGO, this.config.name, this.config.node))
@@ -388,7 +388,7 @@ func (this *kernel) terminate() {
 		mod := this.modules[i]
 		mod.Terminate()
 	}
-	this.runtime.launched = false
+	this.process.launched = false
 
 	if this.config.name == this.config.role || this.config.role == "" {
 		log.Println(fmt.Sprintf("%s %s-%s stopped", INFRAGO, this.config.name, this.config.node))
