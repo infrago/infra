@@ -628,31 +628,30 @@ func (this *basicModule) Mapping(config Vars, data Map, value Map, argn bool, pa
 						fieldValue = int64(autoValue())
 					case func() int64:
 						fieldValue = autoValue()
+					case func() uint:
+						fieldValue = uint64(autoValue())
+					case func() uint8:
+						fieldValue = uint64(autoValue())
+					case func() uint16:
+						fieldValue = uint64(autoValue())
+					case func() uint32:
+						fieldValue = uint64(autoValue())
+					case func() uint64:
+						fieldValue = autoValue()
 					case func() float32:
 						fieldValue = float64(autoValue())
 					case func() float64:
 						fieldValue = autoValue()
 					case int:
-						{
-							fieldValue = int64(autoValue)
-						}
+						fieldValue = int64(autoValue)
 					case int8:
-						{
-							fieldValue = int64(autoValue)
-						}
+						fieldValue = int64(autoValue)
 					case int16:
-						{
-							fieldValue = int64(autoValue)
-						}
+						fieldValue = int64(autoValue)
 					case int32:
-						{
-							fieldValue = int64(autoValue)
-						}
+						fieldValue = int64(autoValue)
 					case float32:
-						{
-							fieldValue = float64(autoValue)
-						}
-
+						fieldValue = float64(autoValue)
 					case []int:
 						{
 							arr := []int64{}
@@ -685,6 +684,42 @@ func (this *basicModule) Mapping(config Vars, data Map, value Map, argn bool, pa
 							}
 							fieldValue = arr
 						}
+					case []int64:
+						fieldValue = autoValue
+					case []uint:
+						{
+							arr := []uint64{}
+							for _, nv := range autoValue {
+								arr = append(arr, uint64(nv))
+							}
+							fieldValue = arr
+						}
+					case []uint8:
+						{
+							arr := []uint64{}
+							for _, nv := range autoValue {
+								arr = append(arr, uint64(nv))
+							}
+							fieldValue = arr
+						}
+					case []uint16:
+						{
+							arr := []uint64{}
+							for _, nv := range autoValue {
+								arr = append(arr, uint64(nv))
+							}
+							fieldValue = arr
+						}
+					case []uint32:
+						{
+							arr := []uint64{}
+							for _, nv := range autoValue {
+								arr = append(arr, uint64(nv))
+							}
+							fieldValue = arr
+						}
+					case []uint64:
+						fieldValue = autoValue
 
 					case []float32:
 						{
