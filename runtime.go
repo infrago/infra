@@ -17,7 +17,7 @@ import (
 // bamgoo is the bamgoo runtime instance that drives module lifecycle.
 var bamgoo = &bamgooRuntime{
 	modules: make([]Module, 0),
-	name:    BAMGOO, role: BAMGOO, node: "", version: "", setting: Map{},
+	project: BAMGOO, profile: GLOBAL, node: "", setting: Map{},
 }
 
 type (
@@ -32,10 +32,9 @@ type (
 	}
 
 	bamgooIdentity struct {
-		Name    string `json:"name"`
-		Role    string `json:"role"`
+		Project string `json:"project"`
+		Profile string `json:"profile"`
 		Node    string `json:"node"`
-		Version string `json:"version"`
 	}
 )
 
@@ -43,13 +42,12 @@ type bamgooRuntime struct {
 	mutex   sync.RWMutex
 	modules []Module
 
-	name    string
-	role    string
-	roleSet bool
-	node    string
-	nodeSet bool
-	version string
-	setting Map
+	project    string
+	profile    string
+	profileSet bool
+	node       string
+	nodeSet    bool
+	setting    Map
 
 	overrideStatus bool
 	loadStatus     bool
@@ -63,29 +61,29 @@ type bamgooRuntime struct {
 func (c *bamgooRuntime) Name() string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return c.name
+	return c.project
 }
 
 func (c *bamgooRuntime) Project() string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return c.name
+	return c.project
 }
 
-func (c *bamgooRuntime) Role() string {
+func (c *bamgooRuntime) Profile() string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return c.role
+	return c.profile
 }
 
-func (c *bamgooRuntime) setRole(role string) {
+func (c *bamgooRuntime) setProfile(profile string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if role == "" {
+	if profile == "" {
 		return
 	}
-	c.role = role
-	c.roleSet = true
+	c.profile = profile
+	c.profileSet = true
 }
 
 func (c *bamgooRuntime) setNode(node string) {
@@ -104,20 +102,13 @@ func (c *bamgooRuntime) Node() string {
 	return c.node
 }
 
-func (c *bamgooRuntime) Version() string {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return c.version
-}
-
 func (c *bamgooRuntime) Identity() bamgooIdentity {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return bamgooIdentity{
-		Name:    c.name,
-		Role:    c.role,
+		Project: c.project,
+		Profile: c.profile,
 		Node:    c.node,
-		Version: c.version,
 	}
 }
 
@@ -171,17 +162,14 @@ func (c *bamgooRuntime) runtimeConfig(cfg Map) {
 		cfg = Map{}
 	}
 
-	if name, ok := cfg["name"].(string); ok && name != "" {
-		c.name = name
+	if project, ok := cfg["project"].(string); ok && project != "" {
+		c.project = project
 	}
-	if role, ok := cfg["role"].(string); ok && !c.roleSet {
-		c.role = role
+	if name, ok := cfg["name"].(string); ok && name != "" {
+		c.project = name
 	}
 	if node, ok := cfg["node"].(string); ok && node != "" && !c.nodeSet {
 		c.node = node
-	}
-	if version, ok := cfg["version"].(string); ok {
-		c.version = version
 	}
 	if setting, ok := cfg["setting"].(Map); ok {
 		for k, v := range setting {
@@ -268,8 +256,8 @@ func (c *bamgooRuntime) Start() {
 	// trigger can fire before late modules (e.g. bus) are fully ready.
 	trigger.Toggle(START)
 
-	project, role, node := c.runtimeInfo()
-	fmt.Printf("bamgoo started: project=%s role=%s node=%s\n", project, role, node)
+	project, profile, node := c.runtimeInfo()
+	fmt.Printf("bamgoo started: project=%s profile=%s node=%s\n", project, profile, node)
 
 	c.startStatus = true
 }
@@ -295,7 +283,7 @@ func (c *bamgooRuntime) Close() {
 	if c.closeStatus {
 		return
 	}
-	project, role, node := c.runtimeInfo()
+	project, profile, node := c.runtimeInfo()
 	// close the modules in reverse order
 	for i := len(c.modules) - 1; i >= 0; i-- {
 		c.modules[i].Close()
@@ -303,7 +291,7 @@ func (c *bamgooRuntime) Close() {
 	c.closeStatus = true
 	c.openStatus = false
 	c.setupStatus = false
-	fmt.Printf("bamgoo stopped: project=%s role=%s node=%s\n", project, role, node)
+	fmt.Printf("bamgoo stopped: project=%s profile=%s node=%s\n", project, profile, node)
 }
 
 // Wait blocks until system termination signal.
@@ -325,20 +313,20 @@ func (c *bamgooRuntime) Override(args ...bool) bool {
 
 func (c *bamgooRuntime) runtimeInfo() (string, string, string) {
 	c.mutex.RLock()
-	project := c.name
-	role := c.role
+	project := c.project
+	profile := c.profile
 	node := c.node
 	c.mutex.RUnlock()
 	if project == "" {
 		project = BAMGOO
 	}
-	if role == "" {
-		role = BAMGOO
+	if profile == "" {
+		profile = GLOBAL
 	}
 	if node == "" {
 		node = "-"
 	}
-	return project, role, node
+	return project, profile, node
 }
 
 func bootstrapNode() (string, bool) {

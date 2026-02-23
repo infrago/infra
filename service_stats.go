@@ -14,15 +14,15 @@ type ServiceStats struct {
 type NodeInfo struct {
 	Project  string   `json:"project"`
 	Node     string   `json:"node"`
-	Role     string   `json:"role"`
+	Profile  string   `json:"profile"`
 	Services []string `json:"services"`
 	Updated  int64    `json:"updated"`
 }
 
 // ServiceNode indicates one node serving a service.
 type ServiceNode struct {
-	Node string `json:"node"`
-	Role string `json:"role"`
+	Node    string `json:"node"`
+	Profile string `json:"profile"`
 }
 
 // ServiceInfo is a service-centric online view.
