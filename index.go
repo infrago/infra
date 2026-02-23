@@ -49,3 +49,23 @@ func Go() {
 func Override(args ...bool) bool {
 	return bamgoo.Override(args...)
 }
+
+func Identity() bamgooIdentity {
+	return bamgoo.Identity()
+}
+
+func Name() string {
+	return bamgoo.Name()
+}
+
+func Role() string {
+	return bamgoo.Role()
+}
+
+func Node() string {
+	return bamgoo.Node()
+}
+
+func Version() string {
+	return bamgoo.Version()
+}

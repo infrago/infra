@@ -5,7 +5,6 @@ func init() {
 	Mount(basic)
 	Mount(library)
 	Mount(trigger)
-	Mount(providers)
 
 	hook.AttachBus(&defaultBusHook{})
 	hook.AttachConfig(&defaultConfigHook{})

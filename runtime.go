@@ -27,6 +27,13 @@ type (
 		Stop()
 		Close()
 	}
+
+	bamgooIdentity struct {
+		Name    string `json:"name"`
+		Role    string `json:"role"`
+		Node    string `json:"node"`
+		Version string `json:"version"`
+	}
 )
 
 type bamgooRuntime struct {
@@ -46,6 +53,41 @@ type bamgooRuntime struct {
 	openStatus     bool
 	startStatus    bool
 	closeStatus    bool
+}
+
+func (c *bamgooRuntime) Name() string {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.name
+}
+
+func (c *bamgooRuntime) Role() string {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.role
+}
+
+func (c *bamgooRuntime) Node() string {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.node
+}
+
+func (c *bamgooRuntime) Version() string {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.version
+}
+
+func (c *bamgooRuntime) Identity() bamgooIdentity {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return bamgooIdentity{
+		Name:    c.name,
+		Role:    c.role,
+		Node:    c.node,
+		Version: c.version,
+	}
 }
 
 // Mount attaches a module into the core lifecycle and returns a host for submodules.
