@@ -9,3 +9,28 @@ type ServiceStats struct {
 	TotalLatency int64  `json:"total_latency_ms"`
 	AvgLatency   int64  `json:"avg_latency_ms"`
 }
+
+// NodeInfo contains one online node's exposed service set.
+type NodeInfo struct {
+	Project  string   `json:"project"`
+	Node     string   `json:"node"`
+	Role     string   `json:"role"`
+	Services []string `json:"services"`
+	Updated  int64    `json:"updated"`
+}
+
+// ServiceNode indicates one node serving a service.
+type ServiceNode struct {
+	Node string `json:"node"`
+	Role string `json:"role"`
+}
+
+// ServiceInfo is a service-centric online view.
+type ServiceInfo struct {
+	Service   string        `json:"service"`
+	Name      string        `json:"name"`
+	Desc      string        `json:"desc"`
+	Updated   int64         `json:"updated"`
+	Instances int           `json:"instances"`
+	Nodes     []ServiceNode `json:"nodes"`
+}

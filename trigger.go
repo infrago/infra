@@ -79,13 +79,9 @@ func (m *triggerModule) Setup() {
 		}
 	}
 }
-func (m *triggerModule) Open() {}
-func (m *triggerModule) Start() {
-	m.Toggle(START)
-}
-func (m *triggerModule) Stop() {
-	m.SyncToggle(STOP)
-}
+func (m *triggerModule) Open()  {}
+func (m *triggerModule) Start() {}
+func (m *triggerModule) Stop()  {}
 func (m *triggerModule) Close() {}
 
 func (m *triggerModule) nextMethodName(name string) string {

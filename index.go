@@ -58,6 +58,10 @@ func Name() string {
 	return bamgoo.Name()
 }
 
+func Project() string {
+	return bamgoo.Project()
+}
+
 func Role() string {
 	return bamgoo.Role()
 }

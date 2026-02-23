@@ -61,6 +61,12 @@ func (c *bamgooRuntime) Name() string {
 	return c.name
 }
 
+func (c *bamgooRuntime) Project() string {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.name
+}
+
 func (c *bamgooRuntime) Role() string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
@@ -220,6 +226,10 @@ func (c *bamgooRuntime) Start() {
 	for _, mod := range c.modules {
 		mod.Start()
 	}
+	// Trigger START after all modules are started.
+	// This must stay in runtime (not triggerModule.Start), otherwise the
+	// trigger can fire before late modules (e.g. bus) are fully ready.
+	trigger.Toggle(START)
 	c.startStatus = true
 }
 
@@ -228,6 +238,10 @@ func (c *bamgooRuntime) Stop() {
 	if !c.startStatus {
 		return
 	}
+	// Trigger STOP before module shutdown, so handlers can still use modules
+	// like bus/log while they are alive.
+	// This is centralized here for deterministic lifecycle ordering.
+	trigger.SyncToggle(STOP)
 	// stop the modules in reverse order
 	for i := len(c.modules) - 1; i >= 0; i-- {
 		c.modules[i].Stop()

@@ -38,6 +38,14 @@ func (h *defaultBusHook) Stats() []ServiceStats {
 	return nil
 }
 
+func (h *defaultBusHook) ListNodes() []NodeInfo {
+	return nil
+}
+
+func (h *defaultBusHook) ListServices() []ServiceInfo {
+	return nil
+}
+
 func (h *defaultConfigHook) LoadConfig() (base.Map, error) {
 	drvName, params, err := parseConfigParams()
 	if err != nil {

@@ -29,6 +29,8 @@ type (
 		Publish(meta *Meta, name string, value base.Map) error
 		Enqueue(meta *Meta, name string, value base.Map) error
 		Stats() []ServiceStats
+		ListNodes() []NodeInfo
+		ListServices() []ServiceInfo
 	}
 
 	ConfigHook interface {
@@ -113,4 +115,22 @@ func (h *bamgooHook) Stats() []ServiceStats {
 		return nil
 	}
 	return h.bus.Stats()
+}
+
+func (h *bamgooHook) ListNodes() []NodeInfo {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.bus == nil {
+		return nil
+	}
+	return h.bus.ListNodes()
+}
+
+func (h *bamgooHook) ListServices() []ServiceInfo {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.bus == nil {
+		return nil
+	}
+	return h.bus.ListServices()
 }
