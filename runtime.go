@@ -1,10 +1,13 @@
 package bamgoo
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/signal"
 	"slices"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -42,7 +45,9 @@ type bamgooRuntime struct {
 
 	name    string
 	role    string
+	roleSet bool
 	node    string
+	nodeSet bool
 	version string
 	setting Map
 
@@ -71,6 +76,26 @@ func (c *bamgooRuntime) Role() string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.role
+}
+
+func (c *bamgooRuntime) setRole(role string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if role == "" {
+		return
+	}
+	c.role = role
+	c.roleSet = true
+}
+
+func (c *bamgooRuntime) setNode(node string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if node == "" {
+		return
+	}
+	c.node = node
+	c.nodeSet = true
 }
 
 func (c *bamgooRuntime) Node() string {
@@ -149,10 +174,10 @@ func (c *bamgooRuntime) runtimeConfig(cfg Map) {
 	if name, ok := cfg["name"].(string); ok && name != "" {
 		c.name = name
 	}
-	if role, ok := cfg["role"].(string); ok {
+	if role, ok := cfg["role"].(string); ok && !c.roleSet {
 		c.role = role
 	}
-	if node, ok := cfg["node"].(string); ok && node != "" {
+	if node, ok := cfg["node"].(string); ok && node != "" && !c.nodeSet {
 		c.node = node
 	}
 	if version, ok := cfg["version"].(string); ok {
@@ -173,12 +198,24 @@ func (c *bamgooRuntime) Load() {
 		return
 	}
 
+	// bootstrap runtime node from CLI/env before config load, so config can't override it.
+	if node, ok := bootstrapNode(); ok {
+		c.setNode(node)
+	}
+
 	//从配置模块加载配置
 	cfg, err := hook.LoadConfig()
 	if err != nil {
 		panic(fmt.Errorf("load config failed: %w", err))
 	}
 	c.Config(cfg)
+
+	// ensure node is always available and concise by default.
+	c.mutex.Lock()
+	if strings.TrimSpace(c.node) == "" {
+		c.node = defaultNodeID()
+	}
+	c.mutex.Unlock()
 
 	c.loadStatus = true
 }
@@ -230,6 +267,10 @@ func (c *bamgooRuntime) Start() {
 	// This must stay in runtime (not triggerModule.Start), otherwise the
 	// trigger can fire before late modules (e.g. bus) are fully ready.
 	trigger.Toggle(START)
+
+	project, role, node := c.runtimeInfo()
+	fmt.Printf("bamgoo started: project=%s role=%s node=%s\n", project, role, node)
+
 	c.startStatus = true
 }
 
@@ -254,6 +295,7 @@ func (c *bamgooRuntime) Close() {
 	if c.closeStatus {
 		return
 	}
+	project, role, node := c.runtimeInfo()
 	// close the modules in reverse order
 	for i := len(c.modules) - 1; i >= 0; i-- {
 		c.modules[i].Close()
@@ -261,6 +303,7 @@ func (c *bamgooRuntime) Close() {
 	c.closeStatus = true
 	c.openStatus = false
 	c.setupStatus = false
+	fmt.Printf("bamgoo stopped: project=%s role=%s node=%s\n", project, role, node)
 }
 
 // Wait blocks until system termination signal.
@@ -278,4 +321,79 @@ func (c *bamgooRuntime) Override(args ...bool) bool {
 		c.overrideStatus = args[0]
 	}
 	return c.overrideStatus
+}
+
+func (c *bamgooRuntime) runtimeInfo() (string, string, string) {
+	c.mutex.RLock()
+	project := c.name
+	role := c.role
+	node := c.node
+	c.mutex.RUnlock()
+	if project == "" {
+		project = BAMGOO
+	}
+	if role == "" {
+		role = BAMGOO
+	}
+	if node == "" {
+		node = "-"
+	}
+	return project, role, node
+}
+
+func bootstrapNode() (string, bool) {
+	if v := strings.TrimSpace(os.Getenv("BAMGOO_NODE")); v != "" {
+		return v, true
+	}
+
+	args := os.Args[1:]
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if !strings.HasPrefix(arg, "--") {
+			continue
+		}
+		kv := strings.TrimPrefix(arg, "--")
+		if strings.HasPrefix(kv, "node=") {
+			v := strings.TrimSpace(strings.TrimPrefix(kv, "node="))
+			if v != "" {
+				return v, true
+			}
+			continue
+		}
+		if kv == "node" && i+1 < len(args) {
+			v := strings.TrimSpace(args[i+1])
+			if v != "" && !strings.HasPrefix(v, "--") {
+				return v, true
+			}
+		}
+	}
+	return "", false
+}
+
+func defaultNodeID() string {
+	// 48-bit random hex id, always 12 chars and avoid leading zero.
+	buf := make([]byte, 6)
+	if _, err := rand.Read(buf); err == nil {
+		if buf[0] == 0 {
+			buf[0] = 1
+		}
+		return hex.EncodeToString(buf)
+	}
+
+	// fallback (should be rare): still avoid leading zero.
+	id := strings.TrimSpace(Generate())
+	if id == "" {
+		return "100000000000"
+	}
+	if len(id) >= 12 {
+		id = id[len(id)-12:]
+	}
+	id = strings.TrimLeft(id, "0")
+	if id == "" {
+		id = "1"
+	}
+	if len(id) > 12 {
+		id = id[len(id)-12:]
+	}
+	return strings.Repeat("1", 12-len(id)) + id
 }

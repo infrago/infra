@@ -27,15 +27,26 @@ func Register(args ...Any) {
 	}
 }
 
-// Ready initializes and connects modules without starting them.
-func Ready() {
+// Prepare initializes and opens modules without starting them.
+func Prepare(role ...string) {
+	if len(role) > 0 {
+		bamgoo.setRole(role[0])
+	}
 	bamgoo.Load()
 	bamgoo.Setup()
 	bamgoo.Open()
 }
 
-// Go starts the full lifecycle and blocks until stop.
-func Go() {
+// Ready is an alias of Prepare for compatibility.
+func Ready(role ...string) {
+	Prepare(role...)
+}
+
+// Run starts the full lifecycle and blocks until stop.
+func Run(role ...string) {
+	if len(role) > 0 {
+		bamgoo.setRole(role[0])
+	}
 	bamgoo.Load()
 	bamgoo.Setup()
 	bamgoo.Open()
@@ -43,6 +54,11 @@ func Go() {
 	bamgoo.Wait()
 	bamgoo.Stop()
 	bamgoo.Close()
+}
+
+// Go is an alias of Run for compatibility.
+func Go(role ...string) {
+	Run(role...)
 }
 
 // Override controls whether registrations can overwrite existing entries.
