@@ -27,8 +27,8 @@ func Register(args ...Any) {
 	}
 }
 
-func RegisterProfile(profile Profile) {
-	registry.RegisterProfile(profile)
+func RegisterProfile(key string, profile Profile) {
+	registry.RegisterProfile(key, profile)
 }
 
 // Prepare initializes and opens modules without starting them.
@@ -76,6 +76,26 @@ func Identity() bamgooIdentity {
 
 func Node() string {
 	return bamgoo.Node()
+}
+
+// Invoke executes one entry as a new request context.
+func Invoke(name string, value Map) (Map, Res) {
+	return core.Invoke(nil, name, value)
+}
+
+// Enqueue dispatches one async queued service request.
+func Enqueue(name string, value Map) error {
+	return hook.Enqueue(name, value)
+}
+
+// Broadcast dispatches one async event to all subscribers.
+func Broadcast(name string, value Map) error {
+	return hook.Broadcast(name, value)
+}
+
+// Publish dispatches one async event (currently same behavior as Broadcast).
+func Publish(name string, value Map) error {
+	return hook.Publish(name, value)
 }
 
 func normalizeProfiles(profile ...string) []string {

@@ -13,7 +13,8 @@ var registry = &registerRegistry{
 	entries: make([]registerEntry, 0),
 	profiles: map[string]Profile{
 		GLOBAL: {
-			Name:     GLOBAL,
+			Name:     "全局",
+			Desc:     "默认配置",
 			Includes: []string{"*"},
 		},
 	},
@@ -22,6 +23,7 @@ var registry = &registerRegistry{
 type (
 	Profile struct {
 		Name     string
+		Desc     string
 		Includes []string
 		Exclues  []string
 	}
@@ -51,10 +53,7 @@ func (r *registerRegistry) Register(name string, value Any) {
 	}
 
 	if profile, ok := value.(Profile); ok {
-		if profile.Name == "" {
-			profile.Name = name
-		}
-		r.RegisterProfile(profile)
+		r.RegisterProfile(name, profile)
 		return
 	}
 
@@ -84,16 +83,19 @@ func (r *registerRegistry) Register(name string, value Any) {
 	})
 }
 
-func (r *registerRegistry) RegisterProfile(profile Profile) {
-	profile.Name = normalizeToken(profile.Name)
-	if profile.Name == "" {
+func (r *registerRegistry) RegisterProfile(key string, profile Profile) {
+	key = normalizeToken(key)
+	if key == "" {
 		return
+	}
+	if strings.TrimSpace(profile.Name) == "" {
+		profile.Name = key
 	}
 	profile.Includes = normalizePatterns(profile.Includes)
 	profile.Exclues = normalizePatterns(profile.Exclues)
 
 	r.mutex.Lock()
-	r.profiles[profile.Name] = profile
+	r.profiles[key] = profile
 	r.mutex.Unlock()
 }
 

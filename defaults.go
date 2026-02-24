@@ -24,6 +24,11 @@ func (h *defaultBusHook) Request(meta *Meta, name string, value base.Map, _ time
 	return nil, OK
 }
 
+func (h *defaultBusHook) Broadcast(meta *Meta, name string, value base.Map) error {
+	_, _, _ = core.invokeLocal(meta, name, value)
+	return nil
+}
+
 func (h *defaultBusHook) Publish(meta *Meta, name string, value base.Map) error {
 	_, _, _ = core.invokeLocal(meta, name, value)
 	return nil

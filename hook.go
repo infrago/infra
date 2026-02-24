@@ -26,6 +26,7 @@ type (
 
 	BusHook interface {
 		Request(meta *Meta, name string, value base.Map, timeout time.Duration) (base.Map, base.Res)
+		Broadcast(meta *Meta, name string, value base.Map) error
 		Publish(meta *Meta, name string, value base.Map) error
 		Enqueue(meta *Meta, name string, value base.Map) error
 		Stats() []ServiceStats
@@ -88,6 +89,15 @@ func (h *bamgooHook) Request(meta *Meta, name string, value base.Map, timeout ti
 		return nil, ErrorResult(errBusHookMissing)
 	}
 	return h.bus.Request(meta, name, value, timeout)
+}
+
+func (h *bamgooHook) Broadcast(name string, value base.Map) error {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.bus == nil {
+		return errBusHookMissing
+	}
+	return h.bus.Broadcast(nil, name, value)
 }
 
 func (h *bamgooHook) Publish(name string, value base.Map) error {
