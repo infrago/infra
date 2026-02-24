@@ -25,7 +25,7 @@ type (
 		Name     string
 		Desc     string
 		Includes []string
-		Exclues  []string
+		Excludes []string
 	}
 
 	RegistryComponent interface {
@@ -92,7 +92,7 @@ func (r *registerRegistry) RegisterProfile(key string, profile Profile) {
 		profile.Name = key
 	}
 	profile.Includes = normalizePatterns(profile.Includes)
-	profile.Exclues = normalizePatterns(profile.Exclues)
+	profile.Excludes = normalizePatterns(profile.Excludes)
 
 	r.mutex.Lock()
 	r.profiles[key] = profile
@@ -152,7 +152,7 @@ func buildMatchers(selected []string, profiles map[string]Profile) []profileMatc
 			}
 			matchers = append(matchers, profileMatcher{
 				include: include,
-				exclude: profile.Exclues,
+				exclude: profile.Excludes,
 			})
 			continue
 		}
