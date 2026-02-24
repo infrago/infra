@@ -219,14 +219,10 @@ func normalizePatterns(patterns []string) []string {
 
 func buildRegistryKey(component, name string) string {
 	component = normalizeToken(component)
-	name = normalizeToken(name)
-	if component == "" {
-		return name
-	}
-	if name == "" {
+	if component != "" {
 		return component
 	}
-	return component + "." + name
+	return normalizeToken(name)
 }
 
 func normalizeToken(s string) string {
