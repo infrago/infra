@@ -1,7 +1,6 @@
 package bamgoo
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -133,11 +132,9 @@ func (e *coreModule) RegisterService(name string, service Service) {
 func (e *coreModule) Config(Map) {}
 func (e *coreModule) Setup()     {}
 func (e *coreModule) Open()      {}
-func (e *coreModule) Start() {
-	fmt.Println("core module is running.")
-}
-func (e *coreModule) Stop()  {}
-func (e *coreModule) Close() {}
+func (e *coreModule) Start()     {}
+func (e *coreModule) Stop()      {}
+func (e *coreModule) Close()     {}
 
 func (e *coreModule) Wait() {
 	// 待处理，加入自己的退出信号
