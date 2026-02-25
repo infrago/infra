@@ -17,7 +17,7 @@ import (
 // bamgoo is the bamgoo runtime instance that drives module lifecycle.
 var bamgoo = &bamgooRuntime{
 	modules: make([]Module, 0),
-	project: BAMGOO, profile: GLOBAL, node: "", setting: Map{},
+	project: BAMGOO, profile: GLOBAL, node: "", setting: Map{}, runProfiles: []string{GLOBAL},
 }
 
 type (
@@ -42,12 +42,13 @@ type bamgooRuntime struct {
 	mutex   sync.RWMutex
 	modules []Module
 
-	project    string
-	profile    string
-	profileSet bool
-	node       string
-	nodeSet    bool
-	setting    Map
+	project       string
+	profile       string
+	runProfiles   []string
+	configProfile string
+	node          string
+	nodeSet       bool
+	setting       Map
 
 	overrideStatus bool
 	loadStatus     bool
@@ -76,14 +77,25 @@ func (c *bamgooRuntime) Profile() string {
 	return c.profile
 }
 
-func (c *bamgooRuntime) setProfile(profile string) {
+func (c *bamgooRuntime) setRequestedProfiles(profiles []string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if profile == "" {
+	if len(profiles) == 0 {
+		c.runProfiles = []string{GLOBAL}
 		return
 	}
-	c.profile = profile
-	c.profileSet = true
+	next := make([]string, 0, len(profiles))
+	for _, profile := range profiles {
+		profile = normalizeToken(profile)
+		if profile == "" {
+			continue
+		}
+		next = append(next, profile)
+	}
+	if len(next) == 0 {
+		next = []string{GLOBAL}
+	}
+	c.runProfiles = next
 }
 
 func (c *bamgooRuntime) setNode(node string) {
@@ -176,6 +188,20 @@ func (c *bamgooRuntime) runtimeConfig(cfg Map) {
 			c.setting[k] = v
 		}
 	}
+	if profile, ok := cfg["profile"].(string); ok {
+		profile = normalizeToken(profile)
+		if profile != "" {
+			c.configProfile = profile
+		}
+	}
+	if runtimeCfg, ok := cfg["bamgoo"].(Map); ok {
+		if profile, ok := runtimeCfg["profile"].(string); ok {
+			profile = normalizeToken(profile)
+			if profile != "" {
+				c.configProfile = profile
+			}
+		}
+	}
 
 	c.configStatus = true
 }
@@ -202,6 +228,9 @@ func (c *bamgooRuntime) Load() {
 	c.mutex.Lock()
 	if strings.TrimSpace(c.node) == "" {
 		c.node = defaultNodeID()
+	}
+	if selected := c.effectiveProfilesLocked(); len(selected) > 0 {
+		c.profile = selected[0]
 	}
 	c.mutex.Unlock()
 
@@ -329,6 +358,28 @@ func (c *bamgooRuntime) runtimeInfo() (string, string, string) {
 	return project, profile, node
 }
 
+func (c *bamgooRuntime) EffectiveProfiles() []string {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.effectiveProfilesLocked()
+}
+
+func (c *bamgooRuntime) effectiveProfilesLocked() []string {
+	// priority: env > config > Run(profile) > global
+	if profile, ok := bootstrapProfile(); ok {
+		return []string{profile}
+	}
+	if c.configProfile != "" {
+		return []string{c.configProfile}
+	}
+	if len(c.runProfiles) > 0 {
+		out := make([]string, len(c.runProfiles))
+		copy(out, c.runProfiles)
+		return out
+	}
+	return []string{GLOBAL}
+}
+
 func bootstrapNode() (string, bool) {
 	if v := strings.TrimSpace(os.Getenv("BAMGOO_NODE")); v != "" {
 		return v, true
@@ -354,6 +405,13 @@ func bootstrapNode() (string, bool) {
 				return v, true
 			}
 		}
+	}
+	return "", false
+}
+
+func bootstrapProfile() (string, bool) {
+	if v := normalizeToken(os.Getenv("BAMGOO_PROFILE")); v != "" {
+		return v, true
 	}
 	return "", false
 }

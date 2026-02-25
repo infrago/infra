@@ -1,11 +1,7 @@
 package bamgoo
 
 import (
-	"bytes"
 	"encoding/base64"
-	"encoding/gob"
-	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -16,7 +12,6 @@ import (
 	"time"
 
 	. "github.com/bamgoo/base"
-	"github.com/pelletier/go-toml/v2"
 )
 
 var (
@@ -68,6 +63,7 @@ type (
 		Encode EncodeFunc
 		Decode DecodeFunc
 	}
+	Codecs     map[string]Codec
 	EncodeFunc func(v Any) (Any, error)
 	DecodeFunc func(d Any, v Any) (Any, error)
 
@@ -79,16 +75,13 @@ type (
 	}
 )
 
-func init() {
-	Mount(codec)
-	codec.registerDefaults()
-}
-
 // Register
 func (module *codecModule) Register(name string, value Any) {
 	switch val := value.(type) {
 	case Codec:
-		module.Codec(name, val)
+		module.RegisterCodec(name, val)
+	case Codecs:
+		module.RegisterCodecs(val)
 	}
 }
 
@@ -147,8 +140,8 @@ func (module *codecModule) Start() {}
 func (module *codecModule) Stop()  {}
 func (module *codecModule) Close() {}
 
-// Codec registers codec.
-func (module *codecModule) Codec(name string, config Codec) {
+// RegisterCodec registers one codec.
+func (module *codecModule) RegisterCodec(name string, config Codec) {
 	module.mutex.Lock()
 	defer module.mutex.Unlock()
 
@@ -171,7 +164,15 @@ func (module *codecModule) Codec(name string, config Codec) {
 	}
 }
 
-func (module *codecModule) Codecs() map[string]Codec {
+// RegisterCodecs registers codecs in batch.
+func (module *codecModule) RegisterCodecs(codecs Codecs) {
+	for name, cfg := range codecs {
+		module.RegisterCodec(name, cfg)
+	}
+}
+
+// ListCodecs returns all registered codecs.
+func (module *codecModule) ListCodecs() map[string]Codec {
 	codecs := map[string]Codec{}
 	for k, v := range module.codecs {
 		codecs[k] = v
@@ -260,281 +261,6 @@ func Decrypt(name string, obj Any) (Any, error)          { return codec.Decrypt(
 
 func Sequence() int64                   { return codec.Sequence() }
 func Generate(prefixs ...string) string { return codec.Generate(prefixs...) }
-
-// defaults
-func (module *codecModule) registerDefaults() {
-	module.Codec(JSON, Codec{
-		Encode: func(v Any) (Any, error) {
-			if bts, ok := v.([]byte); ok {
-				return bts, nil
-			}
-			return json.Marshal(v)
-		},
-		Decode: func(d Any, v Any) (Any, error) {
-			data, ok := toBytes(d)
-			if !ok {
-				return nil, errInvalidCodecData
-			}
-			if v != nil {
-				return v, json.Unmarshal(data, v)
-			}
-			var out Any
-			return out, json.Unmarshal(data, &out)
-		},
-	})
-	module.Codec(XML, Codec{
-		Encode: func(v Any) (Any, error) {
-			if bts, ok := v.([]byte); ok {
-				return bts, nil
-			}
-			return xml.Marshal(v)
-		},
-		Decode: func(d Any, v Any) (Any, error) {
-			data, ok := toBytes(d)
-			if !ok {
-				return nil, errInvalidCodecData
-			}
-			if v != nil {
-				return v, xml.Unmarshal(data, v)
-			}
-			var out Any
-			return out, xml.Unmarshal(data, &out)
-		},
-	})
-	module.Codec(GOB, Codec{
-		Encode: func(v Any) (Any, error) {
-			if bts, ok := v.([]byte); ok {
-				return bts, nil
-			}
-			var buf bytes.Buffer
-			enc := gob.NewEncoder(&buf)
-			if err := enc.Encode(v); err != nil {
-				return nil, err
-			}
-			return buf.Bytes(), nil
-		},
-		Decode: func(d Any, v Any) (Any, error) {
-			data, ok := toBytes(d)
-			if !ok {
-				return nil, errInvalidCodecData
-			}
-			if v == nil {
-				var out Any
-				v = &out
-			}
-			dec := gob.NewDecoder(bytes.NewReader(data))
-			return v, dec.Decode(v)
-		},
-	})
-	module.Codec(TOML, Codec{
-		Encode: func(v Any) (Any, error) {
-			if bts, ok := v.([]byte); ok {
-				return bts, nil
-			}
-			return toml.Marshal(v)
-		},
-		Decode: func(d Any, v Any) (Any, error) {
-			data, ok := toBytes(d)
-			if !ok {
-				return nil, errInvalidCodecData
-			}
-			if v != nil {
-				return v, toml.Unmarshal(data, v)
-			}
-			var out Any
-			return out, toml.Unmarshal(data, &out)
-		},
-	})
-	module.Codec(DIGIT, Codec{
-		Encode: func(v Any) (Any, error) {
-			n, err := toInt64(v)
-			if err != nil {
-				return nil, err
-			}
-			return encodeInt64(n, module.config.Digit, module.config.Salt, module.config.Length)
-		},
-		Decode: func(d Any, v Any) (Any, error) {
-			s, ok := toString(d)
-			if !ok {
-				return nil, errInvalidCodecData
-			}
-			return decodeInt64(s, module.config.Digit, module.config.Salt)
-		},
-	})
-	module.Codec(DIGITS, Codec{
-		Encode: func(v Any) (Any, error) {
-			arr, err := toInt64Slice(v)
-			if err != nil {
-				return nil, err
-			}
-			return encodeInt64Slice(arr, module.config.Digit, module.config.Salt, module.config.Length)
-		},
-		Decode: func(d Any, v Any) (Any, error) {
-			s, ok := toString(d)
-			if !ok {
-				return nil, errInvalidCodecData
-			}
-			return decodeInt64Slice(s, module.config.Digit, module.config.Salt)
-		},
-	})
-	module.Codec(TEXT, Codec{
-		Encode: func(v Any) (Any, error) {
-			var data []byte
-			switch vv := v.(type) {
-			case []byte:
-				data = vv
-			case string:
-				data = []byte(vv)
-			default:
-				bts, err := json.Marshal(v)
-				if err != nil {
-					return nil, err
-				}
-				data = bts
-			}
-			return encodeBytes(data, module.config.Text, module.config.Salt)
-		},
-		Decode: func(d Any, v Any) (Any, error) {
-			s, ok := toString(d)
-			if !ok {
-				return nil, errInvalidCodecData
-			}
-			data, err := decodeBytes(s, module.config.Text, module.config.Salt)
-			if err != nil {
-				return nil, err
-			}
-			if v != nil {
-				return v, json.Unmarshal(data, v)
-			}
-			return data, nil
-		},
-	})
-	module.Codec(TEXTS, Codec{
-		Encode: func(v Any) (Any, error) {
-			arr, err := toStringSlice(v)
-			if err != nil {
-				return nil, err
-			}
-			bts, err := json.Marshal(arr)
-			if err != nil {
-				return nil, err
-			}
-			return encodeBytes(bts, module.config.Text, module.config.Salt)
-		},
-		Decode: func(d Any, v Any) (Any, error) {
-			s, ok := toString(d)
-			if !ok {
-				return nil, errInvalidCodecData
-			}
-			data, err := decodeBytes(s, module.config.Text, module.config.Salt)
-			if err != nil {
-				return nil, err
-			}
-			var out []string
-			if err := json.Unmarshal(data, &out); err != nil {
-				return nil, err
-			}
-			return out, nil
-		},
-	})
-}
-
-// helpers
-func toBytes(v Any) ([]byte, bool) {
-	switch vv := v.(type) {
-	case []byte:
-		return vv, true
-	case string:
-		return []byte(vv), true
-	default:
-		return nil, false
-	}
-}
-
-func toString(v Any) (string, bool) {
-	switch vv := v.(type) {
-	case string:
-		return vv, true
-	case []byte:
-		return string(vv), true
-	default:
-		return fmt.Sprintf("%v", v), true
-	}
-}
-
-func toInt64(v Any) (int64, error) {
-	switch vv := v.(type) {
-	case int:
-		return int64(vv), nil
-	case int8:
-		return int64(vv), nil
-	case int16:
-		return int64(vv), nil
-	case int32:
-		return int64(vv), nil
-	case int64:
-		return vv, nil
-	case uint:
-		return int64(vv), nil
-	case uint8:
-		return int64(vv), nil
-	case uint16:
-		return int64(vv), nil
-	case uint32:
-		return int64(vv), nil
-	case uint64:
-		return int64(vv), nil
-	case float32:
-		return int64(vv), nil
-	case float64:
-		return int64(vv), nil
-	case string:
-		return strconv.ParseInt(vv, 10, 64)
-	default:
-		return 0, errInvalidCodecData
-	}
-}
-
-func toInt64Slice(v Any) ([]int64, error) {
-	switch vv := v.(type) {
-	case []int64:
-		return vv, nil
-	case []int:
-		out := make([]int64, 0, len(vv))
-		for _, n := range vv {
-			out = append(out, int64(n))
-		}
-		return out, nil
-	case []Any:
-		out := make([]int64, 0, len(vv))
-		for _, n := range vv {
-			val, err := toInt64(n)
-			if err != nil {
-				return nil, err
-			}
-			out = append(out, val)
-		}
-		return out, nil
-	default:
-		return nil, errInvalidCodecData
-	}
-}
-
-func toStringSlice(v Any) ([]string, error) {
-	switch vv := v.(type) {
-	case []string:
-		return vv, nil
-	case []Any:
-		out := make([]string, 0, len(vv))
-		for _, s := range vv {
-			str, _ := toString(s)
-			out = append(out, str)
-		}
-		return out, nil
-	default:
-		return nil, errInvalidCodecData
-	}
-}
 
 func normalizeAlphabet(alphabet string) ([]rune, error) {
 	if alphabet == "" {

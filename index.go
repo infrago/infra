@@ -33,10 +33,10 @@ func RegisterProfile(key string, profile Profile) {
 
 // Prepare initializes and opens modules without starting them.
 func Prepare(profile ...string) {
-	selected := normalizeProfiles(profile...)
-	bamgoo.setProfile(selected[0])
-	registry.Apply(selected...)
+	requested := normalizeProfiles(profile...)
+	bamgoo.setRequestedProfiles(requested)
 	bamgoo.Load()
+	registry.Apply(bamgoo.EffectiveProfiles()...)
 	bamgoo.Setup()
 	bamgoo.Open()
 }
@@ -48,10 +48,10 @@ func Ready(profile ...string) {
 
 // Run starts the full lifecycle and blocks until stop.
 func Run(profile ...string) {
-	selected := normalizeProfiles(profile...)
-	bamgoo.setProfile(selected[0])
-	registry.Apply(selected...)
+	requested := normalizeProfiles(profile...)
+	bamgoo.setRequestedProfiles(requested)
 	bamgoo.Load()
+	registry.Apply(bamgoo.EffectiveProfiles()...)
 	bamgoo.Setup()
 	bamgoo.Open()
 	bamgoo.Start()
