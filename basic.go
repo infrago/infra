@@ -81,15 +81,15 @@ type (
 		// Alias 类型别名
 		Alias []string
 
-		// Check 类型检查方法
-		Check TypeCheckFunc
+		// Valid 类型检查方法
+		Valid TypeValidFunc
 
-		// Convert 类型转换方法
-		Convert TypeConvertFunc
+		// Value 类型值包装方法
+		Value TypeValueFunc
 	}
 
-	TypeCheckFunc   func(Any, Var) bool
-	TypeConvertFunc func(Any, Var) Any
+	TypeValidFunc func(Any, Var) bool
+	TypeValueFunc func(Any, Var) Any
 )
 
 func (this *basicModule) Register(name string, value Any) {
@@ -380,40 +380,40 @@ func (this *basicModule) Types() map[string]Type {
 	return types
 }
 
-// typeDefaultCheck 默认的类型校验方法
+// typeDefaultValid 默认的类型校验方法
 // 直接转到正则去匹配
-func (this *basicModule) typeDefaultCheck(value Any, config Var) bool {
+func (this *basicModule) typeDefaultValid(value Any, config Var) bool {
 	return this.Match(config.Type, fmt.Sprintf("%s", value))
 }
 
-// typeDefaultConvert 默认值包装方法
-func (this *basicModule) typeDefaultConvert(value Any, config Var) Any {
+// typeDefaultValue 默认值包装方法
+func (this *basicModule) typeDefaultValue(value Any, config Var) Any {
 	return fmt.Sprintf("%s", value)
 }
 
-// typeCheck 获取类型的校验方法
-func (this *basicModule) typeCheck(name string) TypeCheckFunc {
+// typeValid 获取类型的校验方法
+func (this *basicModule) typeValid(name string) TypeValidFunc {
 	if config, ok := this.types[name]; ok {
-		if config.Check != nil {
-			return config.Check
+		if config.Valid != nil {
+			return config.Valid
 		}
 	}
-	return this.typeDefaultCheck
+	return this.typeDefaultValid
 }
 
-// typeConvert 获取类型的值包装方法
-func (this *basicModule) typeConvert(name string) TypeConvertFunc {
+// typeValue 获取类型的值包装方法
+func (this *basicModule) typeValue(name string) TypeValueFunc {
 	if config, ok := this.types[name]; ok {
-		if config.Convert != nil {
-			return config.Convert
+		if config.Value != nil {
+			return config.Value
 		}
 	}
-	return this.typeDefaultConvert
+	return this.typeDefaultValue
 }
 
-// typeConvert 获取类型的校验和值包装方法
-func (this *basicModule) typeMethod(name string) (TypeCheckFunc, TypeConvertFunc) {
-	return this.typeCheck(name), this.typeConvert(name)
+// typeMethod 获取类型的校验和值包装方法
+func (this *basicModule) typeMethod(name string) (TypeValidFunc, TypeValueFunc) {
+	return this.typeValid(name), this.typeValue(name)
 }
 
 // Mapping parses data by config and fills value.
@@ -460,10 +460,10 @@ func (this *basicModule) Mapping(config Vars, data Map, value Map, argn bool, pa
 				if fieldConfig.Default != nil && !argn {
 					fieldValue = normalizeDefault(fieldConfig.Default)
 
-					if fieldConfig.Type != "" || fieldConfig.Convert != nil {
+					if fieldConfig.Type != "" || fieldConfig.Value != nil {
 						_, fieldValueCall := this.typeMethod(fieldConfig.Type)
-						if fieldConfig.Convert != nil {
-							fieldValueCall = fieldConfig.Convert
+						if fieldConfig.Value != nil {
+							fieldValueCall = fieldConfig.Value
 						}
 						if fieldValueCall != nil {
 							fieldValue = fieldValueCall(fieldValue, fieldConfig)
@@ -492,13 +492,13 @@ func (this *basicModule) Mapping(config Vars, data Map, value Map, argn bool, pa
 				}
 
 				// validate + convert
-				if fieldConfig.Type != "" || fieldConfig.Check != nil || fieldConfig.Convert != nil {
+				if fieldConfig.Type != "" || fieldConfig.Valid != nil || fieldConfig.Value != nil {
 					fieldCheckCall, fieldConvertCall := this.typeMethod(fieldConfig.Type)
-					if fieldConfig.Check != nil {
-						fieldCheckCall = fieldConfig.Check
+					if fieldConfig.Valid != nil {
+						fieldCheckCall = fieldConfig.Valid
 					}
-					if fieldConfig.Convert != nil {
-						fieldConvertCall = fieldConfig.Convert
+					if fieldConfig.Value != nil {
+						fieldConvertCall = fieldConfig.Value
 					}
 
 					if fieldCheckCall != nil {

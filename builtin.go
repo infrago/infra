@@ -382,10 +382,10 @@ func registerBuiltinTypes() {
 	// password
 	basic.RegisterType("password", Type{
 		Name: "password",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			return builtinToText(value) != ""
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			text := builtinToText(value)
 			if Match("password", text) {
 				return text
@@ -397,16 +397,16 @@ func registerBuiltinTypes() {
 
 	// any/map
 	basic.RegisterType("any", Type{
-		Name:    "any",
-		Alias:   []string{"*"},
-		Check:   func(value Any, config Var) bool { return true },
-		Convert: func(value Any, config Var) Any { return value },
+		Name:  "any",
+		Alias: []string{"*"},
+		Valid: func(value Any, config Var) bool { return true },
+		Value: func(value Any, config Var) Any { return value },
 	})
 	basic.RegisterType("[any]", Type{
 		Name:  "[any]",
 		Alias: []string{"anys"},
-		Check: func(value Any, config Var) bool { return true },
-		Convert: func(value Any, config Var) Any {
+		Valid: func(value Any, config Var) bool { return true },
+		Value: func(value Any, config Var) Any {
 			switch v := value.(type) {
 			case []Any:
 				return v
@@ -425,14 +425,14 @@ func registerBuiltinTypes() {
 	basic.RegisterType("map", Type{
 		Name:  "map",
 		Alias: []string{"object", "dict"},
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			switch value.(type) {
 			case Map, []Map:
 				return true
 			}
 			return false
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			switch v := value.(type) {
 			case Map:
 				return v
@@ -447,14 +447,14 @@ func registerBuiltinTypes() {
 	basic.RegisterType("[map]", Type{
 		Name:  "[map]",
 		Alias: []string{"array_map", "maps"},
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			switch value.(type) {
 			case Map, []Map:
 				return true
 			}
 			return false
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			switch v := value.(type) {
 			case Map:
 				return []Map{v}
@@ -468,18 +468,18 @@ func registerBuiltinTypes() {
 	// bool
 	basic.RegisterType("bool", Type{
 		Name: "bool",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			_, ok := builtinToBool(value)
 			return ok
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			val, _ := builtinToBool(value)
 			return val
 		},
 	})
 	basic.RegisterType("[bool]", Type{
 		Name: "[bool]",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			switch v := value.(type) {
 			case []bool:
 				return true
@@ -495,7 +495,7 @@ func registerBuiltinTypes() {
 				return ok
 			}
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			switch v := value.(type) {
 			case []bool:
 				return v
@@ -532,11 +532,11 @@ func registerIntTypes() {
 	basic.RegisterType("int", Type{
 		Name:  "int",
 		Alias: []string{"integer", "int32", "int64", "bigint"},
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			_, ok := builtinToInt64(value)
 			return ok
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			v, _ := builtinToInt64(value)
 			return int(v)
 		},
@@ -544,7 +544,7 @@ func registerIntTypes() {
 	basic.RegisterType("[int]", Type{
 		Name:  "[int]",
 		Alias: []string{"array_int", "array_integer", "array_int64", "ints"},
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			switch v := value.(type) {
 			case []int:
 				return true
@@ -560,7 +560,7 @@ func registerIntTypes() {
 				return ok
 			}
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			switch v := value.(type) {
 			case []int:
 				return v
@@ -583,11 +583,11 @@ func registerUintTypes() {
 	basic.RegisterType("uint", Type{
 		Name:  "uint",
 		Alias: []string{"uint32", "uint64"},
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			n, ok := builtinToInt64(value)
 			return ok && n >= 0
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			n, _ := builtinToInt64(value)
 			if n < 0 {
 				return uint(0)
@@ -598,7 +598,7 @@ func registerUintTypes() {
 	basic.RegisterType("[uint]", Type{
 		Name:  "[uint]",
 		Alias: []string{"array_uint", "array_uint64", "uints", "units"},
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			switch v := value.(type) {
 			case []uint:
 				return true
@@ -615,7 +615,7 @@ func registerUintTypes() {
 				return ok && n >= 0
 			}
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			switch v := value.(type) {
 			case []uint:
 				return v
@@ -644,11 +644,11 @@ func registerFloatTypes() {
 	basic.RegisterType("float", Type{
 		Name:  "float",
 		Alias: []string{"number", "double", "decimal"},
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			_, ok := builtinToFloat64(value)
 			return ok
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			n, _ := builtinToFloat64(value)
 			return n
 		},
@@ -656,7 +656,7 @@ func registerFloatTypes() {
 	basic.RegisterType("[float]", Type{
 		Name:  "[float]",
 		Alias: []string{"array_float", "array_number", "array_double", "floats"},
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			switch v := value.(type) {
 			case []float64, []float32:
 				return true
@@ -672,7 +672,7 @@ func registerFloatTypes() {
 				return ok
 			}
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			switch v := value.(type) {
 			case []float64:
 				return v
@@ -695,23 +695,23 @@ func registerStringTypes() {
 	basic.RegisterType("string", Type{
 		Name:  "string",
 		Alias: []string{"text"},
-		Check: func(value Any, config Var) bool { return true },
-		Convert: func(value Any, config Var) Any {
+		Valid: func(value Any, config Var) bool { return true },
+		Value: func(value Any, config Var) Any {
 			return builtinToText(value)
 		},
 	})
 	basic.RegisterType("[string]", Type{
 		Name:  "[string]",
 		Alias: []string{"array_string", "strings", "texts"},
-		Check: func(value Any, config Var) bool { return true },
-		Convert: func(value Any, config Var) Any {
+		Valid: func(value Any, config Var) bool { return true },
+		Value: func(value Any, config Var) Any {
 			return builtinToStringSlice(value)
 		},
 	})
 	basic.RegisterType("[line]", Type{
 		Name:  "[line]",
-		Check: func(value Any, config Var) bool { return true },
-		Convert: func(value Any, config Var) Any {
+		Valid: func(value Any, config Var) bool { return true },
+		Value: func(value Any, config Var) Any {
 			lines := strings.Split(builtinToText(value), "\n")
 			out := make([]string, 0, len(lines))
 			for _, line := range lines {
@@ -728,11 +728,11 @@ func registerStringTypes() {
 func registerTimeTypes() {
 	basic.RegisterType("date", Type{
 		Name: "date",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			_, ok := builtinParseDate(value)
 			return ok
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			t, _ := builtinParseDate(value)
 			y, m, d := t.Date()
 			return time.Date(y, m, d, 0, 0, 0, 0, t.Location())
@@ -740,7 +740,7 @@ func registerTimeTypes() {
 	})
 	basic.RegisterType("[date]", Type{
 		Name: "[date]",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			for _, one := range builtinToSlice(value) {
 				if _, ok := builtinParseDate(one); !ok {
 					return false
@@ -748,7 +748,7 @@ func registerTimeTypes() {
 			}
 			return true
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			out := make([]time.Time, 0)
 			for _, one := range builtinToSlice(value) {
 				if t, ok := builtinParseDate(one); ok {
@@ -762,18 +762,18 @@ func registerTimeTypes() {
 
 	basic.RegisterType("datetime", Type{
 		Name: "datetime",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			_, ok := builtinParseDateTime(value)
 			return ok
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			t, _ := builtinParseDateTime(value)
 			return t
 		},
 	})
 	basic.RegisterType("[datetime]", Type{
 		Name: "[datetime]",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			for _, one := range builtinToSlice(value) {
 				if _, ok := builtinParseDateTime(one); !ok {
 					return false
@@ -781,7 +781,7 @@ func registerTimeTypes() {
 			}
 			return true
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			out := make([]time.Time, 0)
 			for _, one := range builtinToSlice(value) {
 				if t, ok := builtinParseDateTime(one); ok {
@@ -794,7 +794,7 @@ func registerTimeTypes() {
 
 	basic.RegisterType("timestamp", Type{
 		Name: "timestamp",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			_, ok := builtinToInt64(value)
 			if ok {
 				return true
@@ -802,7 +802,7 @@ func registerTimeTypes() {
 			_, ok = builtinParseDateTime(value)
 			return ok
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			if n, ok := builtinToInt64(value); ok {
 				return n
 			}
@@ -812,7 +812,7 @@ func registerTimeTypes() {
 	})
 	basic.RegisterType("[timestamp]", Type{
 		Name: "[timestamp]",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			for _, one := range builtinToSlice(value) {
 				if _, ok := builtinToInt64(one); ok {
 					continue
@@ -823,7 +823,7 @@ func registerTimeTypes() {
 			}
 			return true
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			out := make([]int64, 0)
 			for _, one := range builtinToSlice(value) {
 				if n, ok := builtinToInt64(one); ok {
@@ -863,7 +863,7 @@ func registerEnumTypes() {
 
 	basic.RegisterType("enum", Type{
 		Name: "enum",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			allowed := enumValues(config)
 			if len(allowed) == 0 {
 				return true
@@ -871,13 +871,13 @@ func registerEnumTypes() {
 			_, ok := allowed[builtinToText(value)]
 			return ok
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			return builtinToText(value)
 		},
 	})
 	basic.RegisterType("[enum]", Type{
 		Name: "[enum]",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			allowed := enumValues(config)
 			if len(allowed) == 0 {
 				return true
@@ -889,7 +889,7 @@ func registerEnumTypes() {
 			}
 			return true
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			return builtinToStringSlice(value)
 		},
 	})
@@ -900,19 +900,19 @@ func registerPassThroughTypes() {
 		typeName := name
 		basic.RegisterType(typeName, Type{
 			Name: typeName,
-			Check: func(value Any, config Var) bool {
+			Valid: func(value Any, config Var) bool {
 				return value != nil
 			},
-			Convert: func(value Any, config Var) Any {
+			Value: func(value Any, config Var) Any {
 				return value
 			},
 		})
 		basic.RegisterType("["+typeName+"]", Type{
 			Name: "[" + typeName + "]",
-			Check: func(value Any, config Var) bool {
+			Valid: func(value Any, config Var) bool {
 				return value != nil
 			},
-			Convert: func(value Any, config Var) Any {
+			Value: func(value Any, config Var) Any {
 				return builtinToSlice(value)
 			},
 		})
@@ -921,7 +921,7 @@ func registerPassThroughTypes() {
 	basic.RegisterType("json", Type{
 		Name:  "json",
 		Alias: []string{"jsonb"},
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			switch value.(type) {
 			case Map, []Map, []Any:
 				return true
@@ -931,7 +931,7 @@ func registerPassThroughTypes() {
 				return value != nil
 			}
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			switch v := value.(type) {
 			case Map, []Map, []Any:
 				return v
@@ -952,10 +952,10 @@ func registerPassThroughTypes() {
 	basic.RegisterType("[json]", Type{
 		Name:  "[json]",
 		Alias: []string{"array_json", "jsons", "jsonbs"},
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			return value != nil
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			switch v := value.(type) {
 			case []Any:
 				return v
@@ -975,16 +975,16 @@ func registerPassThroughTypes() {
 func registerDBTypes() {
 	basic.RegisterType("uuid", Type{
 		Name: "uuid",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			return builtinIsUUID(builtinToText(value))
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			return strings.ToLower(strings.TrimSpace(builtinToText(value)))
 		},
 	})
 	basic.RegisterType("[uuid]", Type{
 		Name: "[uuid]",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			for _, one := range builtinToSlice(value) {
 				if !builtinIsUUID(builtinToText(one)) {
 					return false
@@ -992,7 +992,7 @@ func registerDBTypes() {
 			}
 			return true
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			out := make([]string, 0)
 			for _, one := range builtinToSlice(value) {
 				out = append(out, strings.ToLower(strings.TrimSpace(builtinToText(one))))
@@ -1003,16 +1003,16 @@ func registerDBTypes() {
 
 	basic.RegisterType("inet", Type{
 		Name: "inet",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			return net.ParseIP(strings.TrimSpace(builtinToText(value))) != nil
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			return strings.TrimSpace(builtinToText(value))
 		},
 	})
 	basic.RegisterType("[inet]", Type{
 		Name: "[inet]",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			for _, one := range builtinToSlice(value) {
 				if net.ParseIP(strings.TrimSpace(builtinToText(one))) == nil {
 					return false
@@ -1020,7 +1020,7 @@ func registerDBTypes() {
 			}
 			return true
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			out := make([]string, 0)
 			for _, one := range builtinToSlice(value) {
 				out = append(out, strings.TrimSpace(builtinToText(one)))
@@ -1031,17 +1031,17 @@ func registerDBTypes() {
 
 	basic.RegisterType("cidr", Type{
 		Name: "cidr",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			_, _, err := net.ParseCIDR(strings.TrimSpace(builtinToText(value)))
 			return err == nil
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			return strings.TrimSpace(builtinToText(value))
 		},
 	})
 	basic.RegisterType("[cidr]", Type{
 		Name: "[cidr]",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			for _, one := range builtinToSlice(value) {
 				_, _, err := net.ParseCIDR(strings.TrimSpace(builtinToText(one)))
 				if err != nil {
@@ -1050,7 +1050,7 @@ func registerDBTypes() {
 			}
 			return true
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			out := make([]string, 0)
 			for _, one := range builtinToSlice(value) {
 				out = append(out, strings.TrimSpace(builtinToText(one)))
@@ -1061,11 +1061,11 @@ func registerDBTypes() {
 
 	basic.RegisterType("macaddr", Type{
 		Name: "macaddr",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			_, err := net.ParseMAC(strings.TrimSpace(builtinToText(value)))
 			return err == nil
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			text := strings.TrimSpace(builtinToText(value))
 			if mac, err := net.ParseMAC(text); err == nil {
 				return strings.ToLower(mac.String())
@@ -1075,7 +1075,7 @@ func registerDBTypes() {
 	})
 	basic.RegisterType("[macaddr]", Type{
 		Name: "[macaddr]",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			for _, one := range builtinToSlice(value) {
 				_, err := net.ParseMAC(strings.TrimSpace(builtinToText(one)))
 				if err != nil {
@@ -1084,7 +1084,7 @@ func registerDBTypes() {
 			}
 			return true
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			out := make([]string, 0)
 			for _, one := range builtinToSlice(value) {
 				text := strings.TrimSpace(builtinToText(one))
@@ -1100,11 +1100,11 @@ func registerDBTypes() {
 
 	basic.RegisterType("decimal128", Type{
 		Name: "decimal128",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			_, ok := builtinParseDecimal(value)
 			return ok
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			if d, ok := builtinParseDecimal(value); ok {
 				return d
 			}
@@ -1113,7 +1113,7 @@ func registerDBTypes() {
 	})
 	basic.RegisterType("[decimal128]", Type{
 		Name: "[decimal128]",
-		Check: func(value Any, config Var) bool {
+		Valid: func(value Any, config Var) bool {
 			for _, one := range builtinToSlice(value) {
 				if _, ok := builtinParseDecimal(one); !ok {
 					return false
@@ -1121,7 +1121,7 @@ func registerDBTypes() {
 			}
 			return true
 		},
-		Convert: func(value Any, config Var) Any {
+		Value: func(value Any, config Var) Any {
 			out := make([]string, 0)
 			for _, one := range builtinToSlice(value) {
 				if d, ok := builtinParseDecimal(one); ok {

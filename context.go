@@ -275,4 +275,5 @@ type Context struct {
 	Config  *coreEntry
 	Setting Map
 	Value   Map
+	Args    Map
 }

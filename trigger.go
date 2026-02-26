@@ -31,6 +31,7 @@ type (
 		Desc     string
 		Nullable bool
 		Args     Vars
+		Data     Vars
 		Action   func(*Context)
 	}
 )
@@ -70,9 +71,11 @@ func (m *triggerModule) Setup() {
 			action := cfg.Action // capture for closure
 			core.RegisterMethod(methodName, Method{
 				Name: cfg.Name, Desc: cfg.Desc,
-				Action: func(ctx *Context) (Map, Res) {
-					action(ctx)
-					return nil, nil
+				Args: cfg.Args, Data: cfg.Data,
+				Action: func(ctx *Context) {
+					if action != nil {
+						action(ctx)
+					}
 				},
 			})
 			m.methods[name] = append(m.methods[name], methodName)

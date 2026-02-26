@@ -28,7 +28,8 @@ type (
 		Desc     string
 		Nullable bool
 		Args     Vars
-		Action   func(*Context) (Map, Res)
+		Data     Vars
+		Action   Any
 		Setting  Map
 	}
 )
@@ -39,7 +40,8 @@ type (
 		Desc     string
 		Nullable bool
 		Args     Vars
-		Action   func(*Context) (Map, Res)
+		Data     Vars
+		Action   Any
 		Setting  Map
 	}
 	Services map[string]Service
@@ -48,7 +50,8 @@ type (
 		Desc     string
 		Nullable bool
 		Args     Vars
-		Action   func(*Context) (Map, Res)
+		Data     Vars
+		Action   Any
 		Setting  Map
 	}
 )
@@ -104,6 +107,7 @@ func (e *coreModule) RegisterMethod(name string, method Method) {
 		Desc:     method.Desc,
 		Nullable: method.Nullable,
 		Args:     method.Args,
+		Data:     method.Data,
 		Action:   method.Action,
 		Setting:  method.Setting,
 	}
@@ -125,6 +129,7 @@ func (e *coreModule) RegisterService(name string, service Service) {
 		Desc:     service.Desc,
 		Nullable: service.Nullable,
 		Args:     service.Args,
+		Data:     service.Data,
 		Action:   service.Action,
 	}
 }
@@ -171,6 +176,15 @@ func (e *coreModule) invokeLocal(meta *Meta, name string, value Map, settings ..
 		Config:  &entry,
 		Setting: Map{},
 		Value:   value,
+		Args:    cloneMap(value),
+	}
+	if len(entry.Args) > 0 {
+		args := Map{}
+		res := Mapping(entry.Args, value, args, false, false, ctx.Timezone())
+		if res != nil && res.Fail() {
+			return nil, res, true
+		}
+		ctx.Args = args
 	}
 	for k, v := range entry.Setting {
 		ctx.Setting[k] = v
@@ -183,7 +197,15 @@ func (e *coreModule) invokeLocal(meta *Meta, name string, value Map, settings ..
 			ctx.Setting[k] = v
 		}
 	}
-	data, res := entry.Action(ctx)
+	data, res := invokeAction(entry.Action, ctx)
+	if len(entry.Data) > 0 && (res == nil || !res.Fail()) && data != nil {
+		mapped := Map{}
+		mappedRes := Mapping(entry.Data, data, mapped, true, false, ctx.Timezone())
+		if mappedRes != nil && mappedRes.Fail() {
+			return nil, mappedRes, true
+		}
+		data = mapped
+	}
 	return data, res, true
 }
 
@@ -193,4 +215,36 @@ func (e *coreModule) invokeRemote(meta *Meta, name string, value Map) (Map, Res)
 		meta = NewMeta()
 	}
 	return hook.Request(meta, name, value, defaultCallTimeout)
+}
+
+func cloneMap(in Map) Map {
+	out := Map{}
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+func invokeAction(action Any, ctx *Context) (Map, Res) {
+	switch fn := action.(type) {
+	case func(*Context):
+		fn(ctx)
+		return Map{}, OK
+	case func(*Context) Map:
+		return fn(ctx), OK
+	case func(*Context) Res:
+		return Map{}, defaultResult(fn(ctx))
+	case func(*Context) (Map, Res):
+		data, res := fn(ctx)
+		return data, defaultResult(res)
+	default:
+		return nil, Fail.With("invalid action signature")
+	}
+}
+
+func defaultResult(res Res) Res {
+	if res == nil {
+		return OK
+	}
+	return res
 }
