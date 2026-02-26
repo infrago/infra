@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"math/big"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -396,11 +398,13 @@ func registerBuiltinTypes() {
 	// any/map
 	basic.RegisterType("any", Type{
 		Name:    "any",
+		Alias:   []string{"*"},
 		Check:   func(value Any, config Var) bool { return true },
 		Convert: func(value Any, config Var) Any { return value },
 	})
 	basic.RegisterType("[any]", Type{
 		Name:  "[any]",
+		Alias: []string{"anys"},
 		Check: func(value Any, config Var) bool { return true },
 		Convert: func(value Any, config Var) Any {
 			switch v := value.(type) {
@@ -419,7 +423,8 @@ func registerBuiltinTypes() {
 	})
 
 	basic.RegisterType("map", Type{
-		Name: "map",
+		Name:  "map",
+		Alias: []string{"object", "dict"},
 		Check: func(value Any, config Var) bool {
 			switch value.(type) {
 			case Map, []Map:
@@ -440,7 +445,8 @@ func registerBuiltinTypes() {
 		},
 	})
 	basic.RegisterType("[map]", Type{
-		Name: "[map]",
+		Name:  "[map]",
+		Alias: []string{"array_map", "maps"},
 		Check: func(value Any, config Var) bool {
 			switch value.(type) {
 			case Map, []Map:
@@ -519,11 +525,13 @@ func registerBuiltinTypes() {
 	// enum + common payload types
 	registerEnumTypes()
 	registerPassThroughTypes()
+	registerDBTypes()
 }
 
 func registerIntTypes() {
 	basic.RegisterType("int", Type{
-		Name: "int",
+		Name:  "int",
+		Alias: []string{"integer", "int32", "int64", "bigint"},
 		Check: func(value Any, config Var) bool {
 			_, ok := builtinToInt64(value)
 			return ok
@@ -534,7 +542,8 @@ func registerIntTypes() {
 		},
 	})
 	basic.RegisterType("[int]", Type{
-		Name: "[int]",
+		Name:  "[int]",
+		Alias: []string{"array_int", "array_integer", "array_int64", "ints"},
 		Check: func(value Any, config Var) bool {
 			switch v := value.(type) {
 			case []int:
@@ -572,7 +581,8 @@ func registerIntTypes() {
 
 func registerUintTypes() {
 	basic.RegisterType("uint", Type{
-		Name: "uint",
+		Name:  "uint",
+		Alias: []string{"uint32", "uint64"},
 		Check: func(value Any, config Var) bool {
 			n, ok := builtinToInt64(value)
 			return ok && n >= 0
@@ -586,7 +596,8 @@ func registerUintTypes() {
 		},
 	})
 	basic.RegisterType("[uint]", Type{
-		Name: "[uint]",
+		Name:  "[uint]",
+		Alias: []string{"array_uint", "array_uint64", "uints", "units"},
 		Check: func(value Any, config Var) bool {
 			switch v := value.(type) {
 			case []uint:
@@ -631,7 +642,8 @@ func registerUintTypes() {
 
 func registerFloatTypes() {
 	basic.RegisterType("float", Type{
-		Name: "float",
+		Name:  "float",
+		Alias: []string{"number", "double", "decimal"},
 		Check: func(value Any, config Var) bool {
 			_, ok := builtinToFloat64(value)
 			return ok
@@ -642,7 +654,8 @@ func registerFloatTypes() {
 		},
 	})
 	basic.RegisterType("[float]", Type{
-		Name: "[float]",
+		Name:  "[float]",
+		Alias: []string{"array_float", "array_number", "array_double", "floats"},
 		Check: func(value Any, config Var) bool {
 			switch v := value.(type) {
 			case []float64, []float32:
@@ -681,6 +694,7 @@ func registerFloatTypes() {
 func registerStringTypes() {
 	basic.RegisterType("string", Type{
 		Name:  "string",
+		Alias: []string{"text"},
 		Check: func(value Any, config Var) bool { return true },
 		Convert: func(value Any, config Var) Any {
 			return builtinToText(value)
@@ -688,6 +702,7 @@ func registerStringTypes() {
 	})
 	basic.RegisterType("[string]", Type{
 		Name:  "[string]",
+		Alias: []string{"array_string", "strings", "texts"},
 		Check: func(value Any, config Var) bool { return true },
 		Convert: func(value Any, config Var) Any {
 			return builtinToStringSlice(value)
@@ -904,7 +919,8 @@ func registerPassThroughTypes() {
 	}
 
 	basic.RegisterType("json", Type{
-		Name: "json",
+		Name:  "json",
+		Alias: []string{"jsonb"},
 		Check: func(value Any, config Var) bool {
 			switch value.(type) {
 			case Map, []Map, []Any:
@@ -934,7 +950,8 @@ func registerPassThroughTypes() {
 		},
 	})
 	basic.RegisterType("[json]", Type{
-		Name: "[json]",
+		Name:  "[json]",
+		Alias: []string{"array_json", "jsons", "jsonbs"},
 		Check: func(value Any, config Var) bool {
 			return value != nil
 		},
@@ -955,6 +972,167 @@ func registerPassThroughTypes() {
 	})
 }
 
+func registerDBTypes() {
+	basic.RegisterType("uuid", Type{
+		Name: "uuid",
+		Check: func(value Any, config Var) bool {
+			return builtinIsUUID(builtinToText(value))
+		},
+		Convert: func(value Any, config Var) Any {
+			return strings.ToLower(strings.TrimSpace(builtinToText(value)))
+		},
+	})
+	basic.RegisterType("[uuid]", Type{
+		Name: "[uuid]",
+		Check: func(value Any, config Var) bool {
+			for _, one := range builtinToSlice(value) {
+				if !builtinIsUUID(builtinToText(one)) {
+					return false
+				}
+			}
+			return true
+		},
+		Convert: func(value Any, config Var) Any {
+			out := make([]string, 0)
+			for _, one := range builtinToSlice(value) {
+				out = append(out, strings.ToLower(strings.TrimSpace(builtinToText(one))))
+			}
+			return out
+		},
+	})
+
+	basic.RegisterType("inet", Type{
+		Name: "inet",
+		Check: func(value Any, config Var) bool {
+			return net.ParseIP(strings.TrimSpace(builtinToText(value))) != nil
+		},
+		Convert: func(value Any, config Var) Any {
+			return strings.TrimSpace(builtinToText(value))
+		},
+	})
+	basic.RegisterType("[inet]", Type{
+		Name: "[inet]",
+		Check: func(value Any, config Var) bool {
+			for _, one := range builtinToSlice(value) {
+				if net.ParseIP(strings.TrimSpace(builtinToText(one))) == nil {
+					return false
+				}
+			}
+			return true
+		},
+		Convert: func(value Any, config Var) Any {
+			out := make([]string, 0)
+			for _, one := range builtinToSlice(value) {
+				out = append(out, strings.TrimSpace(builtinToText(one)))
+			}
+			return out
+		},
+	})
+
+	basic.RegisterType("cidr", Type{
+		Name: "cidr",
+		Check: func(value Any, config Var) bool {
+			_, _, err := net.ParseCIDR(strings.TrimSpace(builtinToText(value)))
+			return err == nil
+		},
+		Convert: func(value Any, config Var) Any {
+			return strings.TrimSpace(builtinToText(value))
+		},
+	})
+	basic.RegisterType("[cidr]", Type{
+		Name: "[cidr]",
+		Check: func(value Any, config Var) bool {
+			for _, one := range builtinToSlice(value) {
+				_, _, err := net.ParseCIDR(strings.TrimSpace(builtinToText(one)))
+				if err != nil {
+					return false
+				}
+			}
+			return true
+		},
+		Convert: func(value Any, config Var) Any {
+			out := make([]string, 0)
+			for _, one := range builtinToSlice(value) {
+				out = append(out, strings.TrimSpace(builtinToText(one)))
+			}
+			return out
+		},
+	})
+
+	basic.RegisterType("macaddr", Type{
+		Name: "macaddr",
+		Check: func(value Any, config Var) bool {
+			_, err := net.ParseMAC(strings.TrimSpace(builtinToText(value)))
+			return err == nil
+		},
+		Convert: func(value Any, config Var) Any {
+			text := strings.TrimSpace(builtinToText(value))
+			if mac, err := net.ParseMAC(text); err == nil {
+				return strings.ToLower(mac.String())
+			}
+			return strings.ToLower(text)
+		},
+	})
+	basic.RegisterType("[macaddr]", Type{
+		Name: "[macaddr]",
+		Check: func(value Any, config Var) bool {
+			for _, one := range builtinToSlice(value) {
+				_, err := net.ParseMAC(strings.TrimSpace(builtinToText(one)))
+				if err != nil {
+					return false
+				}
+			}
+			return true
+		},
+		Convert: func(value Any, config Var) Any {
+			out := make([]string, 0)
+			for _, one := range builtinToSlice(value) {
+				text := strings.TrimSpace(builtinToText(one))
+				if mac, err := net.ParseMAC(text); err == nil {
+					out = append(out, strings.ToLower(mac.String()))
+				} else {
+					out = append(out, strings.ToLower(text))
+				}
+			}
+			return out
+		},
+	})
+
+	basic.RegisterType("decimal128", Type{
+		Name: "decimal128",
+		Check: func(value Any, config Var) bool {
+			_, ok := builtinParseDecimal(value)
+			return ok
+		},
+		Convert: func(value Any, config Var) Any {
+			if d, ok := builtinParseDecimal(value); ok {
+				return d
+			}
+			return builtinToText(value)
+		},
+	})
+	basic.RegisterType("[decimal128]", Type{
+		Name: "[decimal128]",
+		Check: func(value Any, config Var) bool {
+			for _, one := range builtinToSlice(value) {
+				if _, ok := builtinParseDecimal(one); !ok {
+					return false
+				}
+			}
+			return true
+		},
+		Convert: func(value Any, config Var) Any {
+			out := make([]string, 0)
+			for _, one := range builtinToSlice(value) {
+				if d, ok := builtinParseDecimal(one); ok {
+					out = append(out, d)
+				}
+			}
+			return out
+		},
+	})
+}
+
 func builtinToText(v Any) string {
 	switch vv := v.(type) {
 	case string:
@@ -964,6 +1142,38 @@ func builtinToText(v Any) string {
 	default:
 		return fmt.Sprintf("%v", vv)
 	}
+}
+
+func builtinIsUUID(v string) bool {
+	v = strings.ToLower(strings.TrimSpace(v))
+	if len(v) != 36 {
+		return false
+	}
+	for i, c := range v {
+		switch i {
+		case 8, 13, 18, 23:
+			if c != '-' {
+				return false
+			}
+		default:
+			if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func builtinParseDecimal(v Any) (string, bool) {
+	text := strings.TrimSpace(builtinToText(v))
+	if text == "" {
+		return "", false
+	}
+	r := new(big.Rat)
+	if _, ok := r.SetString(text); !ok {
+		return "", false
+	}
+	return r.FloatString(18), true
 }
 
 func builtinToBool(v Any) (bool, bool) {
