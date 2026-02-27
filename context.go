@@ -2,7 +2,6 @@ package bamgoo
 
 import (
 	"context"
-	"os"
 	"sync"
 	"time"
 
@@ -24,9 +23,8 @@ type (
 
 		result Res
 
-		tempfiles []string
-		payload   Map
-		id        string
+		payload Map
+		id      string
 	}
 
 	Metadata struct {
@@ -41,13 +39,6 @@ type (
 
 func NewMeta() *Meta {
 	return &Meta{ctx: context.Background()}
-}
-
-// close releases temp files/directories created by meta.
-func (m *Meta) close() {
-	for _, file := range m.tempfiles {
-		_ = os.Remove(file)
-	}
 }
 
 func (m *Meta) WithContext(ctx context.Context) *Meta {
@@ -197,38 +188,6 @@ func (m *Meta) Metadata(data ...Metadata) Metadata {
 	}
 }
 
-// TempFile creates a temp file and tracks it for cleanup.
-func (m *Meta) TempFile(patterns ...string) (*os.File, error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if m.tempfiles == nil {
-		m.tempfiles = make([]string, 0)
-	}
-
-	file, err := tempFile(patterns...)
-	if err == nil {
-		m.tempfiles = append(m.tempfiles, file.Name())
-	}
-	return file, err
-}
-
-// TempDir creates a temp dir and tracks it for cleanup.
-func (m *Meta) TempDir(patterns ...string) (string, error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if m.tempfiles == nil {
-		m.tempfiles = make([]string, 0)
-	}
-
-	name, err := tempDir(patterns...)
-	if err == nil {
-		m.tempfiles = append(m.tempfiles, name)
-	}
-	return name, err
-}
-
 // Invoke calls another service (local first, then bus).
 // It stores the result in meta and returns only the data.
 func (m *Meta) Invoke(name string, values ...Map) Map {
@@ -239,32 +198,6 @@ func (m *Meta) Invoke(name string, values ...Map) Map {
 	data, res := core.Invoke(m, name, value)
 	m.result = res
 	return data
-}
-
-// CloseMeta should be called after request finishes to cleanup meta.
-func CloseMeta(meta *Meta) {
-	if meta == nil {
-		return
-	}
-	meta.close()
-}
-
-func tempFile(patterns ...string) (*os.File, error) {
-	pattern := ""
-	if len(patterns) > 0 {
-		pattern = patterns[0]
-	}
-	dir := os.TempDir()
-	return os.CreateTemp(dir, pattern)
-}
-
-func tempDir(patterns ...string) (string, error) {
-	pattern := ""
-	if len(patterns) > 0 {
-		pattern = patterns[0]
-	}
-	dir := os.TempDir()
-	return os.MkdirTemp(dir, pattern)
 }
 
 // Context carries invocation data for method/service.
