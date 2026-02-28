@@ -2,6 +2,7 @@ package bamgoo
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,9 +14,9 @@ type (
 		mutex sync.RWMutex
 		ctx   context.Context
 
-		traceId  string
-		spanId   string
-		parentId string
+		traceId      string
+		spanId       string
+		parentSpanId string
 
 		language string
 		timezone int
@@ -25,20 +26,27 @@ type (
 
 		payload Map
 		id      string
+
+		spanStack []metaSpanFrame
 	}
 
 	Metadata struct {
-		TraceId  string `json:"tid,omitempty"`
-		SpanId   string `json:"sid,omitempty"`
-		ParentId string `json:"pid,omitempty"`
-		Language string `json:"l,omitempty"`
-		Timezone int    `json:"z,omitempty"`
-		Token    string `json:"t,omitempty"`
+		TraceId      string `json:"tid,omitempty"`
+		SpanId       string `json:"sid,omitempty"`
+		ParentSpanId string `json:"psid,omitempty"`
+		Language     string `json:"l,omitempty"`
+		Timezone     int    `json:"z,omitempty"`
+		Token        string `json:"t,omitempty"`
+	}
+
+	metaSpanFrame struct {
+		prevSpanId   string
+		prevParentId string
 	}
 )
 
 func NewMeta() *Meta {
-	return &Meta{ctx: context.Background()}
+	return &Meta{ctx: context.Background(), spanStack: make([]metaSpanFrame, 0, 8)}
 }
 
 func (m *Meta) WithContext(ctx context.Context) *Meta {
@@ -70,11 +78,93 @@ func (m *Meta) SpanId(id ...string) string {
 	return m.spanId
 }
 
-func (m *Meta) ParentId(id ...string) string {
+func (m *Meta) ParentSpanId(id ...string) string {
 	if len(id) > 0 {
-		m.parentId = id[0]
+		m.parentSpanId = id[0]
 	}
-	return m.parentId
+	return m.parentSpanId
+}
+
+func (m *Meta) PushSpanFrame(prevSpanId, prevParentId string) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	m.spanStack = append(m.spanStack, metaSpanFrame{
+		prevSpanId:   prevSpanId,
+		prevParentId: prevParentId,
+	})
+}
+
+func (m *Meta) PopSpanFrame() (string, string, bool) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	size := len(m.spanStack)
+	if size == 0 {
+		return "", "", false
+	}
+	last := m.spanStack[size-1]
+	m.spanStack = m.spanStack[:size-1]
+	return last.prevSpanId, last.prevParentId, true
+}
+
+// ParseTraceParent parses W3C traceparent: 00-<traceid>-<spanid>-<flags>.
+func (m *Meta) ParseTraceParent(traceparent string) bool {
+	traceparent = strings.TrimSpace(traceparent)
+	if traceparent == "" {
+		return false
+	}
+	parts := strings.Split(traceparent, "-")
+	if len(parts) != 4 {
+		return false
+	}
+	traceId := strings.TrimSpace(parts[1])
+	spanId := strings.TrimSpace(parts[2])
+	if len(traceId) != 32 || len(spanId) != 16 || !isHexString(traceId) || !isHexString(spanId) {
+		return false
+	}
+	m.TraceId(traceId)
+	m.ParentSpanId(spanId)
+	return true
+}
+
+// TraceParent builds W3C traceparent using current trace/span ids.
+func (m *Meta) TraceParent() string {
+	traceId := normalizeHexID(m.TraceId(), 32)
+	spanId := normalizeHexID(m.SpanId(), 16)
+	return "00-" + traceId + "-" + spanId + "-01"
+}
+
+func normalizeHexID(raw string, size int) string {
+	raw = strings.TrimSpace(strings.ToLower(raw))
+	raw = strings.TrimPrefix(raw, "0x")
+	filtered := make([]rune, 0, len(raw))
+	for _, r := range raw {
+		switch {
+		case r >= '0' && r <= '9':
+			filtered = append(filtered, r)
+		case r >= 'a' && r <= 'f':
+			filtered = append(filtered, r)
+		}
+	}
+	raw = string(filtered)
+	if len(raw) > size {
+		return raw[len(raw)-size:]
+	}
+	if len(raw) < size {
+		return strings.Repeat("0", size-len(raw)) + raw
+	}
+	if raw == "" {
+		return strings.Repeat("0", size)
+	}
+	return raw
+}
+
+func isHexString(v string) bool {
+	for _, r := range v {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *Meta) Language(v ...string) string {
@@ -168,7 +258,7 @@ func (m *Meta) Metadata(data ...Metadata) Metadata {
 		d := data[0]
 		m.traceId = d.TraceId
 		m.spanId = d.SpanId
-		m.parentId = d.ParentId
+		m.parentSpanId = d.ParentSpanId
 		m.language = d.Language
 		m.timezone = d.Timezone
 		m.token = d.Token
@@ -179,13 +269,30 @@ func (m *Meta) Metadata(data ...Metadata) Metadata {
 	}
 
 	return Metadata{
-		TraceId:  m.traceId,
-		SpanId:   m.spanId,
-		ParentId: m.parentId,
-		Language: m.language,
-		Timezone: m.timezone,
-		Token:    m.token,
+		TraceId:      m.traceId,
+		SpanId:       m.spanId,
+		ParentSpanId: m.parentSpanId,
+		Language:     m.language,
+		Timezone:     m.timezone,
+		Token:        m.token,
 	}
+}
+
+// Begin starts a trace span through trace hook.
+func (m *Meta) Begin(name string, attrs ...Map) TraceSpan {
+	merged := mergeMetaAttrs(attrs...)
+	return hook.Begin(m, name, merged)
+}
+
+// Trace emits one trace event through trace hook.
+func (m *Meta) Trace(name string, attrs ...Map) error {
+	merged := mergeMetaAttrs(attrs...)
+	status := ""
+	if v, ok := merged["status"].(string); ok {
+		status = v
+		delete(merged, "status")
+	}
+	return hook.Trace(m, name, status, merged)
 }
 
 // Invoke calls another service (local first, then bus).
@@ -198,6 +305,19 @@ func (m *Meta) Invoke(name string, values ...Map) Map {
 	data, res := core.Invoke(m, name, value)
 	m.result = res
 	return data
+}
+
+func mergeMetaAttrs(items ...Map) Map {
+	out := Map{}
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		for k, v := range item {
+			out[k] = v
+		}
+	}
+	return out
 }
 
 // Context carries invocation data for method/service.

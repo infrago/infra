@@ -17,11 +17,16 @@ var (
 var hook = &bamgooHook{}
 
 type (
+	TraceSpan interface {
+		End(...error)
+	}
+
 	bamgooHook struct {
 		mutex sync.RWMutex
 
 		bus    BusHook
 		config ConfigHook
+		trace  TraceHook
 	}
 
 	BusHook interface {
@@ -37,6 +42,11 @@ type (
 	ConfigHook interface {
 		LoadConfig() (base.Map, error)
 	}
+
+	TraceHook interface {
+		Begin(meta *Meta, name string, attrs base.Map) TraceSpan
+		Trace(meta *Meta, name string, status string, attrs base.Map) error
+	}
 )
 
 // Attach dispatches Module.Attach based on type.
@@ -46,6 +56,8 @@ func (h *bamgooHook) Attach(value base.Any) {
 		h.AttachBus(v)
 	case ConfigHook:
 		h.AttachConfig(v)
+	case TraceHook:
+		h.AttachTrace(v)
 	}
 }
 
@@ -69,6 +81,17 @@ func (h *bamgooHook) AttachConfig(hook ConfigHook) {
 	}
 
 	h.config = hook
+}
+
+func (h *bamgooHook) AttachTrace(hook TraceHook) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	if hook == nil {
+		panic("Invalid trace hook")
+	}
+
+	h.trace = hook
 }
 
 func (h *bamgooHook) LoadConfig() (base.Map, error) {
@@ -144,3 +167,25 @@ func (h *bamgooHook) ListServices() []ServiceInfo {
 	}
 	return h.bus.ListServices()
 }
+
+func (h *bamgooHook) Begin(meta *Meta, name string, attrs base.Map) TraceSpan {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.trace == nil {
+		return noopTraceSpan{}
+	}
+	return h.trace.Begin(meta, name, attrs)
+}
+
+func (h *bamgooHook) Trace(meta *Meta, name string, status string, attrs base.Map) error {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.trace == nil {
+		return nil
+	}
+	return h.trace.Trace(meta, name, status, attrs)
+}
+
+type noopTraceSpan struct{}
+
+func (noopTraceSpan) End(...error) {}

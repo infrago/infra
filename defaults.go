@@ -15,6 +15,7 @@ import (
 type defaultBusHook struct{}
 
 type defaultConfigHook struct{}
+type defaultTraceHook struct{}
 
 func (h *defaultBusHook) Request(meta *Meta, name string, value base.Map, _ time.Duration) (base.Map, base.Res) {
 	data, res, ok := core.invokeLocal(meta, name, value)
@@ -63,6 +64,14 @@ func (h *defaultConfigHook) LoadConfig() (base.Map, error) {
 		return nil, errors.New("Unknown config driver: " + drvName)
 	}
 	return loadConfigFromFile(params)
+}
+
+func (h *defaultTraceHook) Begin(_ *Meta, _ string, _ base.Map) TraceSpan {
+	return noopTraceSpan{}
+}
+
+func (h *defaultTraceHook) Trace(_ *Meta, _ string, _ string, _ base.Map) error {
+	return nil
 }
 
 func parseConfigParams() (string, base.Map, error) {

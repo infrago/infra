@@ -1,6 +1,7 @@
 package bamgoo
 
 import (
+	"errors"
 	"os"
 	"os/signal"
 	"sync"
@@ -23,6 +24,9 @@ type (
 	}
 	coreEntry struct {
 		remote bool
+		kind   string
+		span   string
+		target string
 
 		Name     string
 		Desc     string
@@ -33,6 +37,13 @@ type (
 		Setting  Map
 	}
 )
+
+const (
+	coreKindMethod  = "method"
+	coreKindService = "service"
+	coreKindTrigger = "trigger"
+)
+
 type (
 	Methods map[string]Method
 	Method  struct {
@@ -103,6 +114,9 @@ func (e *coreModule) RegisterMethod(name string, method Method) {
 
 	e.entries[name] = coreEntry{
 		remote:   false,
+		kind:     coreKindMethod,
+		span:     "method:" + name,
+		target:   name,
 		Name:     name,
 		Desc:     method.Desc,
 		Nullable: method.Nullable,
@@ -125,12 +139,45 @@ func (e *coreModule) RegisterService(name string, service Service) {
 	}
 	e.entries[name] = coreEntry{
 		remote:   true,
+		kind:     coreKindService,
+		span:     "service:" + name,
+		target:   name,
 		Name:     name,
 		Desc:     service.Desc,
 		Nullable: service.Nullable,
 		Args:     service.Args,
 		Data:     service.Data,
 		Action:   service.Action,
+	}
+}
+
+func (e *coreModule) registerTriggerMethod(methodName, triggerName string, cfg Trigger) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
+	if methodName == "" {
+		return
+	}
+	if _, ok := e.entries[methodName]; ok {
+		panic("trigger already registered: " + methodName)
+	}
+
+	action := cfg.Action
+	e.entries[methodName] = coreEntry{
+		remote:   false,
+		kind:     coreKindTrigger,
+		span:     "trigger:" + triggerName,
+		target:   triggerName,
+		Name:     cfg.Name,
+		Desc:     cfg.Desc,
+		Nullable: cfg.Nullable,
+		Args:     cfg.Args,
+		Data:     cfg.Data,
+		Action: func(ctx *Context) {
+			if action != nil {
+				action(ctx)
+			}
+		},
 	}
 }
 
@@ -150,10 +197,46 @@ func (e *coreModule) Wait() {
 
 // Invoke calls a method/service (local first, then remote via bus).
 func (e *coreModule) Invoke(meta *Meta, name string, value Map, settings ...Map) (Map, Res) {
+	if meta == nil {
+		meta = NewMeta()
+	}
+
+	spanName := name
+	target := name
+	entryKind := ""
+	e.mutex.RLock()
+	if entry, ok := e.entries[name]; ok {
+		if entry.span != "" {
+			spanName = entry.span
+		}
+		if entry.target != "" {
+			target = entry.target
+		}
+		entryKind = entry.kind
+	}
+	e.mutex.RUnlock()
+
+	span := meta.Begin(spanName, TraceAttrs("bamgoo", TraceKindInternal, target, Map{
+		"module":    "core",
+		"operation": "invoke",
+		"entry":     entryKind,
+	}))
+
 	if data, res, ok := e.invokeLocal(meta, name, value, settings...); ok {
+		if res != nil && res.Fail() {
+			span.End(errors.New(res.Error()))
+		} else {
+			span.End()
+		}
 		return data, res
 	}
-	return e.invokeRemote(meta, name, value)
+	data, res := e.invokeRemote(meta, name, value)
+	if res != nil && res.Fail() {
+		span.End(errors.New(res.Error()))
+	} else {
+		span.End()
+	}
+	return data, res
 }
 
 // localInvoke only calls local method/service, does not go through bus.

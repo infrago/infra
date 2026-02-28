@@ -68,16 +68,7 @@ func (m *triggerModule) Setup() {
 		}
 		for _, cfg := range triggers {
 			methodName := m.nextMethodName(name)
-			action := cfg.Action // capture for closure
-			core.RegisterMethod(methodName, Method{
-				Name: cfg.Name, Desc: cfg.Desc,
-				Args: cfg.Args, Data: cfg.Data,
-				Action: func(ctx *Context) {
-					if action != nil {
-						action(ctx)
-					}
-				},
-			})
+			core.registerTriggerMethod(methodName, name, cfg)
 			m.methods[name] = append(m.methods[name], methodName)
 		}
 	}
