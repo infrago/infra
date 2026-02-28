@@ -79,8 +79,77 @@ func Node() string {
 }
 
 // Invoke executes one entry as a new request context.
-func Invoke(name string, value Map) (Map, Res) {
+func Invoke(name string, values ...Map) (Map, Res) {
+	var value Map
+	if len(values) > 0 {
+		value = values[0]
+	}
 	return core.Invoke(nil, name, value)
+}
+
+// Invokes executes multiple entries and returns results in order.
+func Invokes(name string, values ...Map) ([]Map, Res) {
+	if len(values) == 0 {
+		return []Map{}, OK
+	}
+	results := make([]Map, 0, len(values))
+	for _, value := range values {
+		data, res := Invoke(name, value)
+		if res != nil && res.Fail() {
+			return results, res
+		}
+		results = append(results, data)
+	}
+	return results, OK
+}
+
+// Invoking executes a paged subset of calls and returns total input count.
+func Invoking(name string, offset, limit int, values ...Map) (int64, []Map) {
+	total := int64(len(values))
+	start, end := normalizeInvokeWindow(len(values), offset, limit)
+	if start >= end {
+		return total, []Map{}
+	}
+	results := make([]Map, 0, end-start)
+	for _, value := range values[start:end] {
+		data, res := Invoke(name, value)
+		if res != nil && res.Fail() {
+			return total, results
+		}
+		results = append(results, data)
+	}
+	return total, results
+}
+
+// InvokeOK executes one entry and returns whether result is OK.
+func InvokeOK(name string, values ...Map) bool {
+	_, res := Invoke(name, values...)
+	return res == nil || res.OK()
+}
+
+// InvokeFail executes one entry and returns whether result is failed.
+func InvokeFail(name string, values ...Map) bool {
+	return !InvokeOK(name, values...)
+}
+
+func normalizeInvokeWindow(total, offset, limit int) (int, int) {
+	if total <= 0 {
+		return 0, 0
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if offset >= total {
+		return total, total
+	}
+	end := total
+	if limit > 0 {
+		end = offset + limit
+		if end > total {
+			end = total
+		}
+	}
+	return offset, end
 }
 
 // Enqueue dispatches one async queued service request.

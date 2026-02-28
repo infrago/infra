@@ -307,6 +307,57 @@ func (m *Meta) Invoke(name string, values ...Map) Map {
 	return data
 }
 
+// Invokes executes multiple calls in order and stores last result on meta.
+func (m *Meta) Invokes(name string, values ...Map) []Map {
+	if len(values) == 0 {
+		m.result = OK
+		return []Map{}
+	}
+	results := make([]Map, 0, len(values))
+	for _, value := range values {
+		data, res := core.Invoke(m, name, value)
+		m.result = res
+		if res != nil && res.Fail() {
+			return results
+		}
+		results = append(results, data)
+	}
+	m.result = OK
+	return results
+}
+
+// Invoking executes a paged subset of calls and stores last result on meta.
+func (m *Meta) Invoking(name string, offset, limit int, values ...Map) (int64, []Map) {
+	total := int64(len(values))
+	start, end := normalizeInvokeWindow(len(values), offset, limit)
+	if start >= end {
+		m.result = OK
+		return total, []Map{}
+	}
+	results := make([]Map, 0, end-start)
+	for _, value := range values[start:end] {
+		data, res := core.Invoke(m, name, value)
+		m.result = res
+		if res != nil && res.Fail() {
+			return total, results
+		}
+		results = append(results, data)
+	}
+	m.result = OK
+	return total, results
+}
+
+// InvokeOK executes one call and returns whether result is OK.
+func (m *Meta) InvokeOK(name string, values ...Map) bool {
+	_ = m.Invoke(name, values...)
+	return m.result == nil || m.result.OK()
+}
+
+// InvokeFail executes one call and returns whether result is failed.
+func (m *Meta) InvokeFail(name string, values ...Map) bool {
+	return !m.InvokeOK(name, values...)
+}
+
 func mergeMetaAttrs(items ...Map) Map {
 	out := Map{}
 	for _, item := range items {

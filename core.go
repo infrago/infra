@@ -315,13 +315,42 @@ func invokeAction(action Any, ctx *Context) (Map, Res) {
 		return Map{}, OK
 	case func(*Context) Map:
 		return fn(ctx), OK
+	case func(*Context) []Map:
+		return Map{"items": fn(ctx)}, OK
+	case func(*Context) bool:
+		return Map{"ok": fn(ctx)}, OK
 	case func(*Context) Res:
 		return Map{}, defaultResult(fn(ctx))
+	case func(*Context) error:
+		if err := fn(ctx); err != nil {
+			return nil, Fail.With(err.Error())
+		}
+		return Map{}, OK
+	case func(*Context) Any:
+		return normalizeActionData(fn(ctx)), OK
+	case func(*Context) (Any, Res):
+		data, res := fn(ctx)
+		return normalizeActionData(data), defaultResult(res)
 	case func(*Context) (Map, Res):
 		data, res := fn(ctx)
 		return data, defaultResult(res)
 	default:
 		return nil, Fail.With("invalid action signature")
+	}
+}
+
+func normalizeActionData(data Any) Map {
+	switch v := data.(type) {
+	case nil:
+		return nil
+	case Map:
+		return v
+	case []Map:
+		return Map{"items": v}
+	case bool:
+		return Map{"ok": v}
+	default:
+		return Map{"value": v}
 	}
 }
 
