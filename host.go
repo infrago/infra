@@ -21,5 +21,5 @@ func (h *infragoHost) InvokeLocal(meta *Meta, name string, value Map) (Map, Res,
 }
 
 func (h *infragoHost) RegisterLocal(name string, value Any) {
-	infra.Register(name, value)
+	infrago.Register(name, value)
 }

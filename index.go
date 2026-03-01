@@ -6,7 +6,7 @@ import (
 
 // Mount attaches a module into the infrago runtime and returns a host.
 func Mount(mod Module) Host {
-	return infra.Mount(mod)
+	return infrago.Mount(mod)
 }
 
 // Register registers anything into mounted modules.
@@ -34,11 +34,11 @@ func RegisterProfile(key string, profile Profile) {
 // Prepare initializes and opens modules without starting them.
 func Prepare(profile ...string) {
 	requested := normalizeProfiles(profile...)
-	infra.setRequestedProfiles(requested)
-	infra.Load()
-	registry.Apply(infra.EffectiveProfiles()...)
-	infra.Setup()
-	infra.Open()
+	infrago.setRequestedProfiles(requested)
+	infrago.Load()
+	registry.Apply(infrago.EffectiveProfiles()...)
+	infrago.Setup()
+	infrago.Open()
 }
 
 // Ready is an alias of Prepare for compatibility.
@@ -49,15 +49,15 @@ func Ready(profile ...string) {
 // Run starts the full lifecycle and blocks until stop.
 func Run(profile ...string) {
 	requested := normalizeProfiles(profile...)
-	infra.setRequestedProfiles(requested)
-	infra.Load()
-	registry.Apply(infra.EffectiveProfiles()...)
-	infra.Setup()
-	infra.Open()
-	infra.Start()
-	infra.Wait()
-	infra.Stop()
-	infra.Close()
+	infrago.setRequestedProfiles(requested)
+	infrago.Load()
+	registry.Apply(infrago.EffectiveProfiles()...)
+	infrago.Setup()
+	infrago.Open()
+	infrago.Start()
+	infrago.Wait()
+	infrago.Stop()
+	infrago.Close()
 }
 
 // Go is an alias of Run for compatibility.
@@ -67,15 +67,15 @@ func Go(profile ...string) {
 
 // Override controls whether registrations can overwrite existing entries.
 func Override(args ...bool) bool {
-	return infra.Override(args...)
+	return infrago.Override(args...)
 }
 
 func Identity() infragoIdentity {
-	return infra.Identity()
+	return infrago.Identity()
 }
 
 func Node() string {
-	return infra.Node()
+	return infrago.Node()
 }
 
 // Invoke executes one entry as a new request context.

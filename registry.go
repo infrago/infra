@@ -88,7 +88,7 @@ func (r *registerRegistry) Register(name string, value Any) {
 
 	// no component => keep existing behavior (register immediately)
 	if component == "" {
-		infra.Register(name, value)
+		infrago.Register(name, value)
 		return
 	}
 
@@ -96,7 +96,7 @@ func (r *registerRegistry) Register(name string, value Any) {
 	defer r.mutex.Unlock()
 
 	if r.applied {
-		infra.Register(name, value)
+		infrago.Register(name, value)
 		return
 	}
 
@@ -148,7 +148,7 @@ func (r *registerRegistry) Apply(selected ...string) {
 		if len(matchers) > 0 && !matchesAny(entry.key, matchers) {
 			continue
 		}
-		infra.Register(entry.name, entry.value)
+		infrago.Register(entry.name, entry.value)
 	}
 }
 

@@ -127,7 +127,7 @@ func (this *basicModule) RegisterLanguage(name string, config Language) {
 		config.Strings = make(Strings, 0)
 	}
 
-	if infra.Override() {
+	if infrago.Override() {
 		this.languages[name] = config
 	} else {
 		if _, ok := this.languages[name]; ok == false {
@@ -149,7 +149,7 @@ func (this *basicModule) RegisterStrings(name string, config Strings) {
 	if lang, ok := this.languages[name]; ok {
 		for key, str := range config {
 			key = strings.Replace(key, ".", "_", -1)
-			if infra.Override() {
+			if infrago.Override() {
 				lang.Strings[key] = str
 			} else {
 				if _, ok := lang.Strings[key]; ok == false {
@@ -162,7 +162,7 @@ func (this *basicModule) RegisterStrings(name string, config Strings) {
 
 // RegisterState 注册状态
 func (this *basicModule) RegisterStatus(name string, config Status) {
-	if infra.Override() {
+	if infrago.Override() {
 		this.statuses[name] = config
 	} else {
 		if _, ok := this.statuses[name]; ok == false {
@@ -183,7 +183,7 @@ func (this *basicModule) RegisterMime(name string, config Mime) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
-	if infra.Override() {
+	if infrago.Override() {
 		this.mimes[name] = config
 	} else {
 		if _, ok := this.mimes[name]; ok == false {
@@ -204,7 +204,7 @@ func (this *basicModule) RegisterRegular(name string, config Regular) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
-	if infra.Override() {
+	if infrago.Override() {
 		this.regulars[name] = config
 	} else {
 		if _, ok := this.regulars[name]; ok == false {
@@ -234,7 +234,7 @@ func (this *basicModule) RegisterType(name string, config Type) {
 	}
 
 	for _, key := range alias {
-		if infra.Override() {
+		if infrago.Override() {
 			this.types[key] = config
 		} else {
 			if _, ok := this.types[key]; ok == false {
