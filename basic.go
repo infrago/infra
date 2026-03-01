@@ -16,7 +16,7 @@ var (
 		languages: make(map[string]Language, 0),
 		strings:   make(Strings, 0),
 
-		states:   make(States, 0),
+		statuses: make(Statuses, 0),
 		mimes:    make(Mimes, 0),
 		regulars: make(Regulars, 0),
 		types:    make(map[string]Type, 0),
@@ -32,7 +32,7 @@ type (
 		strings   Strings
 
 		//存储所有状态定义
-		states States
+		statuses Statuses
 		// mimes MIME集合
 		mimes Mimes
 		// regulars 正则表达式集合
@@ -44,9 +44,9 @@ type (
 	// 注意，以下几个类型，不能使用 xxx = map[xxx]yy 的方法定义
 	// 因为无法使用.(type)来断言类型
 
-	// State 状态定义，方便注册
-	State  int
-	States map[string]State
+	// Status 状态定义，方便注册
+	Status   int
+	Statuses map[string]Status
 
 	// MIME mimetype集合
 	Mime  []string
@@ -92,16 +92,22 @@ type (
 	TypeValueFunc func(Any, Var) Any
 )
 
+// Deprecated aliases for compatibility.
+type (
+	State  = Status
+	States = Statuses
+)
+
 func (this *basicModule) Register(name string, value Any) {
 	switch val := value.(type) {
 	case Language:
 		this.RegisterLanguage(name, val)
 	case Strings:
 		this.RegisterStrings(name, val)
-	case State:
-		this.RegisterState(name, val)
-	case States:
-		this.RegisterStates(val)
+	case Status:
+		this.RegisterStatus(name, val)
+	case Statuses:
+		this.RegisterStatuses(val)
 	case Mime:
 		this.RegisterMime(name, val)
 	case Mimes:
@@ -155,20 +161,20 @@ func (this *basicModule) RegisterStrings(name string, config Strings) {
 }
 
 // RegisterState 注册状态
-func (this *basicModule) RegisterState(name string, config State) {
+func (this *basicModule) RegisterStatus(name string, config Status) {
 	if bamgoo.Override() {
-		this.states[name] = config
+		this.statuses[name] = config
 	} else {
-		if _, ok := this.states[name]; ok == false {
-			this.states[name] = config
+		if _, ok := this.statuses[name]; ok == false {
+			this.statuses[name] = config
 		}
 	}
 }
 
 // RegisterStates 批量注册状态
-func (this *basicModule) RegisterStates(config States) {
+func (this *basicModule) RegisterStatuses(config Statuses) {
 	for key, val := range config {
-		this.RegisterState(key, State(val))
+		this.RegisterStatus(key, Status(val))
 	}
 }
 
@@ -247,8 +253,8 @@ func (this *basicModule) Close()     {}
 
 // StateCode 获取状态的代码
 // defs 可指定默认code，不存在时将返回默认code
-func (this *basicModule) StateCode(state string, defs ...int) int {
-	if code, ok := this.states[state]; ok {
+func (this *basicModule) StatusCode(status string, defs ...int) int {
+	if code, ok := this.statuses[status]; ok {
 		return int(code)
 	}
 	if len(defs) > 0 {
@@ -258,15 +264,15 @@ func (this *basicModule) StateCode(state string, defs ...int) int {
 }
 
 // 结果列表
-func (this *basicModule) Results(langs ...string) map[State]string {
+func (this *basicModule) Results(langs ...string) map[Status]string {
 	lang := DEFAULT
 	if len(langs) > 0 {
 		lang = langs[0]
 	}
 
-	codes := map[State]string{}
-	for key, state := range this.states {
-		codes[state] = this.String(lang, key)
+	codes := map[Status]string{}
+	for key, status := range this.statuses {
+		codes[status] = this.String(lang, key)
 	}
 	return codes
 }
@@ -727,10 +733,15 @@ func Mapping(config Vars, data Map, value Map, argn bool, pass bool, zones ...*t
 }
 
 // StateCode 返回状态码
-func StateCode(name string, defs ...int) int {
-	return basic.StateCode(name, defs...)
+func StatusCode(name string, defs ...int) int {
+	return basic.StatusCode(name, defs...)
 }
-func Results(langs ...string) map[State]string {
+
+// StateCode is deprecated, use StatusCode.
+func StateCode(name string, defs ...int) int {
+	return basic.StatusCode(name, defs...)
+}
+func Results(langs ...string) map[Status]string {
 	return basic.Results(langs...)
 }
 

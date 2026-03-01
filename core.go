@@ -1,7 +1,6 @@
 package bamgoo
 
 import (
-	"errors"
 	"os"
 	"os/signal"
 	"sync"
@@ -216,15 +215,14 @@ func (e *coreModule) Invoke(meta *Meta, name string, value Map, settings ...Map)
 	}
 	e.mutex.RUnlock()
 
-	span := meta.Begin(spanName, TraceAttrs("bamgoo", TraceKindInternal, target, Map{
+	span := meta.Begin(spanName, TraceAttrs("bamgoo", entryKind, target, Map{
 		"module":    "core",
 		"operation": "invoke",
-		"entry":     entryKind,
 	}))
 
 	if data, res, ok := e.invokeLocal(meta, name, value, settings...); ok {
 		if res != nil && res.Fail() {
-			span.End(errors.New(res.Error()))
+			span.End(res)
 		} else {
 			span.End()
 		}
@@ -232,7 +230,7 @@ func (e *coreModule) Invoke(meta *Meta, name string, value Map, settings ...Map)
 	}
 	data, res := e.invokeRemote(meta, name, value)
 	if res != nil && res.Fail() {
-		span.End(errors.New(res.Error()))
+		span.End(res)
 	} else {
 		span.End()
 	}

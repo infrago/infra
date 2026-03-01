@@ -8,10 +8,10 @@ import (
 )
 
 var (
-	OK      = Result(0, "ok", "成功")
-	Fail    = Result(1, "fail", "失败")
-	Retry   = Result(2, "retry", "重试")
-	Invalid = Result(3, "invalid", "无效请求或数据")
+	OK       = Result(0, "ok", "成功")
+	Fail     = Result(1, "fail", "失败")
+	Retry    = Result(2, "retry", "重试")
+	Invalid  = Result(3, "invalid", "无效请求或数据")
 	Unsigned = Result(5, "unsigned", "无权访问")
 	Unauthed = Result(6, "unauthed", "无权访问")
 
@@ -24,8 +24,8 @@ type (
 		// code 状态码
 		// 0 表示成功，其它表示失败
 		code int
-		// state 对应的状态
-		state string
+		// status 对应的状态
+		status string
 		//携带的参数
 		args []Any
 		//重试标记
@@ -52,9 +52,9 @@ func (res *result) Code() int {
 	return res.code
 }
 
-// State 返回Res的信息
-func (res *result) State() string {
-	return res.state
+// Status 返回Res的信息
+func (res *result) Status() string {
+	return res.status
 }
 
 // Args 返回Res携带的参数
@@ -66,7 +66,7 @@ func (res *result) Args() []Any {
 // 因为result都是预先定义好的，所以如果直接修改args，会修改本来已经定义好的result
 func (res *result) With(args ...Any) Res {
 	if len(args) > 0 {
-		return &result{res.code, res.state, args, false}
+		return &result{res.code, res.status, args, false}
 	}
 	return res
 }
@@ -77,7 +77,7 @@ func (res *result) Error() string {
 		return ""
 	}
 
-	text := String(DEFAULT, res.state)
+	text := String(DEFAULT, res.status)
 
 	if res.args != nil && len(res.args) > 0 {
 		ccc := strings.Count(text, "%") - strings.Count(text, "%%")
@@ -106,18 +106,18 @@ func ErrorResult(err error) Res {
 	return errorResult(err)
 }
 
-// Result 定义一个result，并自动注册state
-// state 表示状态key
+// Result 定义一个result，并自动注册status
+// status 表示状态key
 // text 表示状态对应的默认文案
-func Result(code int, state string, text string) Res {
+func Result(code int, status string, text string) Res {
 	//自动注册状态和字串
-	basic.RegisterState(state, State(code))
-	basic.RegisterStrings(DEFAULT, Strings{state: text})
+	basic.RegisterStatus(status, Status(code))
+	basic.RegisterStrings(DEFAULT, Strings{status: text})
 
-	// result只携带state，而不携带string
+	// result只携带status，而不携带string
 	// 具体的string需要配置context拿到lang之后生成
 	// 而实现多语言的状态反馈
-	return newResult(code, state)
+	return newResult(code, status)
 }
 
 // func NewResult(code int, text string, args ...Any) Res {
@@ -138,17 +138,17 @@ type (
 func (this *resultGroup) Name() string {
 	return this.name
 }
-func (this *resultGroup) Result(ok bool, state string, text string) Res {
+func (this *resultGroup) Result(ok bool, status string, text string) Res {
 	code := 0
 	if ok == false {
 		code = this.base
 		this.base++
 	}
 
-	if this.name != "" && !strings.HasPrefix(state, this.name+".") {
-		state = this.name + "." + state
+	if this.name != "" && !strings.HasPrefix(status, this.name+".") {
+		status = this.name + "." + status
 	}
-	return Result(code, state, text)
+	return Result(code, status, text)
 }
 
 func ResultGroup(name string, bases ...int) *resultGroup {

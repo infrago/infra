@@ -5,11 +5,13 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	base "github.com/bamgoo/base"
 	"github.com/pelletier/go-toml/v2"
+	"gopkg.in/yaml.v3"
 )
 
 type defaultBusHook struct{}
@@ -186,6 +188,8 @@ func loadConfigFromFile(params base.Map) (base.Map, error) {
 			format = "json"
 		case ".toml", ".tml":
 			format = "toml"
+		case ".yaml", ".yml":
+			format = "yaml"
 		}
 	}
 	if format == "" {
@@ -195,10 +199,10 @@ func loadConfigFromFile(params base.Map) (base.Map, error) {
 }
 
 func defaultConfigFile() string {
-	candidates := []string{"config.toml", "config.json"}
+	candidates := []string{"config.toml", "config.json", "config.yaml", "config.yml"}
 	if exe := filepath.Base(os.Args[0]); exe != "" {
 		name := strings.TrimSuffix(exe, filepath.Ext(exe))
-		candidates = append(candidates, name+".toml", name+".json")
+		candidates = append(candidates, name+".toml", name+".json", name+".yaml", name+".yml")
 	}
 	for _, file := range candidates {
 		if _, err := os.Stat(file); err == nil {
@@ -212,6 +216,12 @@ func detectConfigFormat(data []byte) string {
 	str := strings.TrimSpace(string(data))
 	if strings.HasPrefix(str, "{") || strings.HasPrefix(str, "[") {
 		return "json"
+	}
+	if looksLikeToml(str) {
+		return "toml"
+	}
+	if looksLikeYaml(str) {
+		return "yaml"
 	}
 	if str != "" {
 		return "toml"
@@ -232,7 +242,27 @@ func decodeConfig(data []byte, format string) (base.Map, error) {
 			return nil, err
 		}
 		return out, nil
+	case "yaml", "yml":
+		if err := yaml.Unmarshal(data, &out); err != nil {
+			return nil, err
+		}
+		return out, nil
 	default:
 		return nil, errors.New("Unknown config format: " + format)
 	}
+}
+
+var (
+	tomlKeyValPattern = regexp.MustCompile(`(?m)^\s*[\w\.\-]+\s*=`)
+	tomlSection       = regexp.MustCompile(`(?m)^\s*\[[^\]]+\]\s*$`)
+	yamlKeyValPattern = regexp.MustCompile(`(?m)^\s*[\w\.\-]+\s*:\s*`)
+	yamlListPattern   = regexp.MustCompile(`(?m)^\s*-\s+`)
+)
+
+func looksLikeToml(s string) bool {
+	return tomlKeyValPattern.MatchString(s) || tomlSection.MatchString(s)
+}
+
+func looksLikeYaml(s string) bool {
+	return yamlKeyValPattern.MatchString(s) || yamlListPattern.MatchString(s)
 }

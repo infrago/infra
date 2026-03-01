@@ -18,7 +18,7 @@ var hook = &bamgooHook{}
 
 type (
 	TraceSpan interface {
-		End(...error)
+		End(...base.Any)
 	}
 
 	bamgooHook struct {
@@ -188,4 +188,4 @@ func (h *bamgooHook) Trace(meta *Meta, name string, status string, attrs base.Ma
 
 type noopTraceSpan struct{}
 
-func (noopTraceSpan) End(...error) {}
+func (noopTraceSpan) End(...base.Any) {}

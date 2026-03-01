@@ -17,6 +17,8 @@ type (
 		traceId      string
 		spanId       string
 		parentSpanId string
+		traceKind    string
+		traceEntry   string
 
 		language string
 		timezone int
@@ -42,6 +44,8 @@ type (
 	metaSpanFrame struct {
 		prevSpanId   string
 		prevParentId string
+		prevKind     string
+		prevEntry    string
 	}
 )
 
@@ -85,12 +89,28 @@ func (m *Meta) ParentSpanId(id ...string) string {
 	return m.parentSpanId
 }
 
+func (m *Meta) TraceKind(kind ...string) string {
+	if len(kind) > 0 {
+		m.traceKind = kind[0]
+	}
+	return m.traceKind
+}
+
+func (m *Meta) TraceEntry(entry ...string) string {
+	if len(entry) > 0 {
+		m.traceEntry = entry[0]
+	}
+	return m.traceEntry
+}
+
 func (m *Meta) PushSpanFrame(prevSpanId, prevParentId string) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.spanStack = append(m.spanStack, metaSpanFrame{
 		prevSpanId:   prevSpanId,
 		prevParentId: prevParentId,
+		prevKind:     m.traceKind,
+		prevEntry:    m.traceEntry,
 	})
 }
 
@@ -103,6 +123,8 @@ func (m *Meta) PopSpanFrame() (string, string, bool) {
 	}
 	last := m.spanStack[size-1]
 	m.spanStack = m.spanStack[:size-1]
+	m.traceKind = last.prevKind
+	m.traceEntry = last.prevEntry
 	return last.prevSpanId, last.prevParentId, true
 }
 
