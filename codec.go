@@ -32,6 +32,13 @@ var (
 	errInvalidCodecData = errors.New("Invalid codec data.")
 )
 
+var (
+	// ErrInvalidCodec is returned when codec name is unknown.
+	ErrInvalidCodec = errInvalidCodec
+	// ErrInvalidCodecData is returned when codec data is invalid.
+	ErrInvalidCodecData = errInvalidCodecData
+)
+
 const (
 	JSON   = "json"
 	XML    = "xml"
@@ -258,6 +265,66 @@ func Marshal(name string, obj Any) ([]byte, error)       { return codec.Marshal(
 func Unmarshal(name string, data []byte, obj Any) error  { return codec.Unmarshal(name, data, obj) }
 func Encrypt(name string, obj Any) (string, error)       { return codec.Encrypt(name, obj) }
 func Decrypt(name string, obj Any) (Any, error)          { return codec.Decrypt(name, obj) }
+
+// RegisterCodec registers one codec implementation.
+func RegisterCodec(name string, config Codec) {
+	codec.RegisterCodec(name, config)
+}
+
+// RegisterCodecs registers codec implementations in batch.
+func RegisterCodecs(config Codecs) {
+	codec.RegisterCodecs(config)
+}
+
+// CodecTextAlphabet returns configured text alphabet.
+func CodecTextAlphabet() string {
+	return codec.config.Text
+}
+
+// CodecDigitAlphabet returns configured digit alphabet.
+func CodecDigitAlphabet() string {
+	return codec.config.Digit
+}
+
+// CodecSalt returns configured codec salt.
+func CodecSalt() string {
+	return codec.config.Salt
+}
+
+// CodecLength returns configured encoded length.
+func CodecLength() int {
+	return codec.config.Length
+}
+
+// EncodeInt64 encodes one int64 using current codec config.
+func EncodeInt64(v int64) (string, error) {
+	return encodeInt64(v, codec.config.Digit, codec.config.Salt, codec.config.Length)
+}
+
+// DecodeInt64 decodes one int64 using current codec config.
+func DecodeInt64(v string) (int64, error) {
+	return decodeInt64(v, codec.config.Digit, codec.config.Salt)
+}
+
+// EncodeInt64Slice encodes int64 slice using current codec config.
+func EncodeInt64Slice(v []int64) (string, error) {
+	return encodeInt64Slice(v, codec.config.Digit, codec.config.Salt, codec.config.Length)
+}
+
+// DecodeInt64Slice decodes int64 slice using current codec config.
+func DecodeInt64Slice(v string) ([]int64, error) {
+	return decodeInt64Slice(v, codec.config.Digit, codec.config.Salt)
+}
+
+// EncodeTextBytes encodes bytes using current codec text config.
+func EncodeTextBytes(v []byte) (string, error) {
+	return encodeBytes(v, codec.config.Text, codec.config.Salt)
+}
+
+// DecodeTextBytes decodes bytes using current codec text config.
+func DecodeTextBytes(v string) ([]byte, error) {
+	return decodeBytes(v, codec.config.Text, codec.config.Salt)
+}
 
 func Sequence() int64                   { return codec.Sequence() }
 func Generate(prefixs ...string) string { return codec.Generate(prefixs...) }

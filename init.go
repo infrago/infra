@@ -4,7 +4,6 @@ func init() {
 	Mount(core)
 	Mount(basic)
 	Mount(codec)
-	Mount(builtin)
 	Mount(library)
 	Mount(trigger)
 

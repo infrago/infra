@@ -9,7 +9,8 @@
 
 ## 主要功能
 
-- 生命周期：`Load -> Setup -> Open -> Start -> Stop -> Close`
+- 运行流程（`infra.Run()`）：`Load -> Config -> Setup -> Open -> Start -> Wait -> Stop -> Close`
+- 生命周期（模块接口）：`Setup -> Open -> Start -> Stop -> Close`
 - 统一启动：`infra.Run()`
 - 统一调用：`infra.Invoke()`
 - 模块挂载：模块通过 `infra.Mount(module)` 接入
