@@ -1,4 +1,4 @@
-package bamgoo
+package infra
 
 import (
 	"errors"

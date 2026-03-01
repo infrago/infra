@@ -1,4 +1,4 @@
-package bamgoo
+package infra
 
 import (
 	"encoding/base64"
@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/bamgoo/base"
+	. "github.com/infrago/base"
 )
 
 var (
@@ -19,7 +19,7 @@ var (
 		config: codecConfig{
 			Text:   "01234AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz56789-_/.",
 			Digit:  "abcdefghijkmnpqrstuvwxyz123456789ACDEFGHJKLMNPQRSTUVWXYZ",
-			Salt:   BAMGOO,
+			Salt:   INFRAGO,
 			Length: 7,
 
 			Start:    time.Date(2023, 4, 1, 0, 0, 0, 0, time.Local),

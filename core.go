@@ -1,4 +1,4 @@
-package bamgoo
+package infra
 
 import (
 	"os"
@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	. "github.com/bamgoo/base"
+	. "github.com/infrago/base"
 )
 
 const defaultCallTimeout = 5 * time.Second
@@ -215,7 +215,7 @@ func (e *coreModule) Invoke(meta *Meta, name string, value Map, settings ...Map)
 	}
 	e.mutex.RUnlock()
 
-	span := meta.Begin(spanName, TraceAttrs("bamgoo", entryKind, target, Map{
+	span := meta.Begin(spanName, TraceAttrs("infrago", entryKind, target, Map{
 		"module":    "core",
 		"operation": "invoke",
 	}))

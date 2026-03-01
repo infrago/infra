@@ -1,4 +1,4 @@
-package bamgoo
+package infra
 
 import (
 	"crypto/rand"
@@ -11,13 +11,13 @@ import (
 	"sync"
 	"syscall"
 
-	. "github.com/bamgoo/base"
+	. "github.com/infrago/base"
 )
 
-// bamgoo is the bamgoo runtime instance that drives module lifecycle.
-var bamgoo = &bamgooRuntime{
+// infrago is the infrago runtime instance that drives module lifecycle.
+var infrago = &infragoRuntime{
 	modules: make([]Module, 0),
-	project: BAMGOO, profile: GLOBAL, node: "", setting: Map{}, runProfiles: []string{GLOBAL},
+	project: INFRAGO, profile: GLOBAL, node: "", setting: Map{}, runProfiles: []string{GLOBAL},
 }
 
 type (
@@ -31,14 +31,14 @@ type (
 		Close()
 	}
 
-	bamgooIdentity struct {
+	infragoIdentity struct {
 		Project string `json:"project"`
 		Profile string `json:"profile"`
 		Node    string `json:"node"`
 	}
 )
 
-type bamgooRuntime struct {
+type infragoRuntime struct {
 	mutex   sync.RWMutex
 	modules []Module
 
@@ -59,25 +59,25 @@ type bamgooRuntime struct {
 	closeStatus    bool
 }
 
-func (c *bamgooRuntime) Name() string {
+func (c *infragoRuntime) Name() string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.project
 }
 
-func (c *bamgooRuntime) Project() string {
+func (c *infragoRuntime) Project() string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.project
 }
 
-func (c *bamgooRuntime) Profile() string {
+func (c *infragoRuntime) Profile() string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.profile
 }
 
-func (c *bamgooRuntime) setRequestedProfiles(profiles []string) {
+func (c *infragoRuntime) setRequestedProfiles(profiles []string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if len(profiles) == 0 {
@@ -98,7 +98,7 @@ func (c *bamgooRuntime) setRequestedProfiles(profiles []string) {
 	c.runProfiles = next
 }
 
-func (c *bamgooRuntime) setNode(node string) {
+func (c *infragoRuntime) setNode(node string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if node == "" {
@@ -108,16 +108,16 @@ func (c *bamgooRuntime) setNode(node string) {
 	c.nodeSet = true
 }
 
-func (c *bamgooRuntime) Node() string {
+func (c *infragoRuntime) Node() string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.node
 }
 
-func (c *bamgooRuntime) Identity() bamgooIdentity {
+func (c *infragoRuntime) Identity() infragoIdentity {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return bamgooIdentity{
+	return infragoIdentity{
 		Project: c.project,
 		Profile: c.profile,
 		Node:    c.node,
@@ -125,7 +125,7 @@ func (c *bamgooRuntime) Identity() bamgooIdentity {
 }
 
 // Mount attaches a module into the core lifecycle and returns a host for submodules.
-func (c *bamgooRuntime) Mount(mod Module) Host {
+func (c *infragoRuntime) Mount(mod Module) Host {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -143,7 +143,7 @@ func (c *bamgooRuntime) Mount(mod Module) Host {
 }
 
 // Register dispatches registrations to all mounted modules.
-func (c *bamgooRuntime) Register(name string, value Any) {
+func (c *infragoRuntime) Register(name string, value Any) {
 	// if the value is a module, mount it
 	if mod, ok := value.(Module); ok {
 		c.Mount(mod)
@@ -162,7 +162,7 @@ func (c *bamgooRuntime) Register(name string, value Any) {
 }
 
 // Config updates core config and broadcasts to modules.
-func (c *bamgooRuntime) runtimeConfig(cfg Map) {
+func (c *infragoRuntime) runtimeConfig(cfg Map) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -194,7 +194,7 @@ func (c *bamgooRuntime) runtimeConfig(cfg Map) {
 			c.configProfile = profile
 		}
 	}
-	if runtimeCfg, ok := cfg["bamgoo"].(Map); ok {
+	if runtimeCfg, ok := cfg["infrago"].(Map); ok {
 		if profile, ok := runtimeCfg["profile"].(string); ok {
 			profile = normalizeToken(profile)
 			if profile != "" {
@@ -207,7 +207,7 @@ func (c *bamgooRuntime) runtimeConfig(cfg Map) {
 }
 
 // Load 加载配置
-func (c *bamgooRuntime) Load() {
+func (c *infragoRuntime) Load() {
 	if c.loadStatus {
 		return
 	}
@@ -238,7 +238,7 @@ func (c *bamgooRuntime) Load() {
 }
 
 // Config applies config to core and all modules.
-func (c *bamgooRuntime) Config(cfg Map) {
+func (c *infragoRuntime) Config(cfg Map) {
 	if cfg == nil {
 		cfg = Map{}
 	}
@@ -250,7 +250,7 @@ func (c *bamgooRuntime) Config(cfg Map) {
 }
 
 // Setup initializes all modules.
-func (c *bamgooRuntime) Setup() {
+func (c *infragoRuntime) Setup() {
 	if c.setupStatus {
 		return
 	}
@@ -262,7 +262,7 @@ func (c *bamgooRuntime) Setup() {
 }
 
 // Open connects all modules.
-func (c *bamgooRuntime) Open() {
+func (c *infragoRuntime) Open() {
 	if c.openStatus {
 		return
 	}
@@ -273,7 +273,7 @@ func (c *bamgooRuntime) Open() {
 }
 
 // Start launches all modules.
-func (c *bamgooRuntime) Start() {
+func (c *infragoRuntime) Start() {
 	if c.startStatus {
 		return
 	}
@@ -286,13 +286,13 @@ func (c *bamgooRuntime) Start() {
 	trigger.Toggle(START)
 
 	project, profile, node := c.runtimeInfo()
-	fmt.Printf("bamgoo started: project=%s profile=%s node=%s\n", project, profile, node)
+	fmt.Printf("infrago started: project=%s profile=%s node=%s\n", project, profile, node)
 
 	c.startStatus = true
 }
 
 // Stop terminates all modules in reverse order.
-func (c *bamgooRuntime) Stop() {
+func (c *infragoRuntime) Stop() {
 	if !c.startStatus {
 		return
 	}
@@ -308,7 +308,7 @@ func (c *bamgooRuntime) Stop() {
 }
 
 // Close releases resources for all modules in reverse order.
-func (c *bamgooRuntime) Close() {
+func (c *infragoRuntime) Close() {
 	if c.closeStatus {
 		return
 	}
@@ -320,18 +320,18 @@ func (c *bamgooRuntime) Close() {
 	c.closeStatus = true
 	c.openStatus = false
 	c.setupStatus = false
-	fmt.Printf("bamgoo stopped: project=%s profile=%s node=%s\n", project, profile, node)
+	fmt.Printf("infrago stopped: project=%s profile=%s node=%s\n", project, profile, node)
 }
 
 // Wait blocks until system termination signal.
-func (c *bamgooRuntime) Wait() {
+func (c *infragoRuntime) Wait() {
 	waiter := make(chan os.Signal, 1)
 	signal.Notify(waiter, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-waiter
 }
 
 // Override controls whether registrations can overwrite existing entries.
-func (c *bamgooRuntime) Override(args ...bool) bool {
+func (c *infragoRuntime) Override(args ...bool) bool {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if len(args) > 0 {
@@ -340,14 +340,14 @@ func (c *bamgooRuntime) Override(args ...bool) bool {
 	return c.overrideStatus
 }
 
-func (c *bamgooRuntime) runtimeInfo() (string, string, string) {
+func (c *infragoRuntime) runtimeInfo() (string, string, string) {
 	c.mutex.RLock()
 	project := c.project
 	profile := c.profile
 	node := c.node
 	c.mutex.RUnlock()
 	if project == "" {
-		project = BAMGOO
+		project = INFRAGO
 	}
 	if profile == "" {
 		profile = GLOBAL
@@ -358,13 +358,13 @@ func (c *bamgooRuntime) runtimeInfo() (string, string, string) {
 	return project, profile, node
 }
 
-func (c *bamgooRuntime) EffectiveProfiles() []string {
+func (c *infragoRuntime) EffectiveProfiles() []string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.effectiveProfilesLocked()
 }
 
-func (c *bamgooRuntime) effectiveProfilesLocked() []string {
+func (c *infragoRuntime) effectiveProfilesLocked() []string {
 	// priority: env > config > Run(profile) > global
 	if profile, ok := bootstrapProfile(); ok {
 		return []string{profile}
@@ -381,7 +381,7 @@ func (c *bamgooRuntime) effectiveProfilesLocked() []string {
 }
 
 func bootstrapNode() (string, bool) {
-	if v := strings.TrimSpace(os.Getenv("BAMGOO_NODE")); v != "" {
+	if v := strings.TrimSpace(os.Getenv("INFRAGO_NODE")); v != "" {
 		return v, true
 	}
 
@@ -410,7 +410,7 @@ func bootstrapNode() (string, bool) {
 }
 
 func bootstrapProfile() (string, bool) {
-	if v := normalizeToken(os.Getenv("BAMGOO_PROFILE")); v != "" {
+	if v := normalizeToken(os.Getenv("INFRAGO_PROFILE")); v != "" {
 		return v, true
 	}
 	return "", false

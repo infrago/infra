@@ -1,10 +1,10 @@
-package bamgoo
+package infra
 
 import (
 	"strconv"
 	"sync"
 
-	. "github.com/bamgoo/base"
+	. "github.com/infrago/base"
 )
 
 const (

@@ -1,7 +1,7 @@
-package bamgoo
+package infra
 
 const (
-	BAMGOO  = "bamgoo"
+	INFRAGO  = "infrago"
 	DEFAULT = "default"
 	GLOBAL  = "global"
 )

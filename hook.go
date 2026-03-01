@@ -1,11 +1,11 @@
-package bamgoo
+package infra
 
 import (
 	"errors"
 	"sync"
 	"time"
 
-	base "github.com/bamgoo/base"
+	base "github.com/infrago/base"
 )
 
 var (
@@ -14,14 +14,14 @@ var (
 )
 
 // Hook exposes hook registrations and access (main -> sub).
-var hook = &bamgooHook{}
+var hook = &infragoHook{}
 
 type (
 	TraceSpan interface {
 		End(...base.Any)
 	}
 
-	bamgooHook struct {
+	infragoHook struct {
 		mutex sync.RWMutex
 
 		bus    BusHook
@@ -50,7 +50,7 @@ type (
 )
 
 // Attach dispatches Module.Attach based on type.
-func (h *bamgooHook) Attach(value base.Any) {
+func (h *infragoHook) Attach(value base.Any) {
 	switch v := value.(type) {
 	case BusHook:
 		h.AttachBus(v)
@@ -61,7 +61,7 @@ func (h *bamgooHook) Attach(value base.Any) {
 	}
 }
 
-func (h *bamgooHook) AttachBus(hook BusHook) {
+func (h *infragoHook) AttachBus(hook BusHook) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
@@ -72,7 +72,7 @@ func (h *bamgooHook) AttachBus(hook BusHook) {
 	h.bus = hook
 }
 
-func (h *bamgooHook) AttachConfig(hook ConfigHook) {
+func (h *infragoHook) AttachConfig(hook ConfigHook) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
@@ -83,7 +83,7 @@ func (h *bamgooHook) AttachConfig(hook ConfigHook) {
 	h.config = hook
 }
 
-func (h *bamgooHook) AttachTrace(hook TraceHook) {
+func (h *infragoHook) AttachTrace(hook TraceHook) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
@@ -94,7 +94,7 @@ func (h *bamgooHook) AttachTrace(hook TraceHook) {
 	h.trace = hook
 }
 
-func (h *bamgooHook) LoadConfig() (base.Map, error) {
+func (h *infragoHook) LoadConfig() (base.Map, error) {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 
@@ -105,7 +105,7 @@ func (h *bamgooHook) LoadConfig() (base.Map, error) {
 }
 
 // Request sends a bus request (main -> sub).
-func (h *bamgooHook) Request(meta *Meta, name string, value base.Map, timeout time.Duration) (base.Map, base.Res) {
+func (h *infragoHook) Request(meta *Meta, name string, value base.Map, timeout time.Duration) (base.Map, base.Res) {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
@@ -114,7 +114,7 @@ func (h *bamgooHook) Request(meta *Meta, name string, value base.Map, timeout ti
 	return h.bus.Request(meta, name, value, timeout)
 }
 
-func (h *bamgooHook) Broadcast(name string, value base.Map) error {
+func (h *infragoHook) Broadcast(name string, value base.Map) error {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
@@ -123,7 +123,7 @@ func (h *bamgooHook) Broadcast(name string, value base.Map) error {
 	return h.bus.Broadcast(nil, name, value)
 }
 
-func (h *bamgooHook) Publish(name string, value base.Map) error {
+func (h *infragoHook) Publish(name string, value base.Map) error {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
@@ -132,7 +132,7 @@ func (h *bamgooHook) Publish(name string, value base.Map) error {
 	return h.bus.Publish(nil, name, value)
 }
 
-func (h *bamgooHook) Enqueue(name string, value base.Map) error {
+func (h *infragoHook) Enqueue(name string, value base.Map) error {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
@@ -141,7 +141,7 @@ func (h *bamgooHook) Enqueue(name string, value base.Map) error {
 	return h.bus.Enqueue(nil, name, value)
 }
 
-func (h *bamgooHook) Stats() []ServiceStats {
+func (h *infragoHook) Stats() []ServiceStats {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
@@ -150,7 +150,7 @@ func (h *bamgooHook) Stats() []ServiceStats {
 	return h.bus.Stats()
 }
 
-func (h *bamgooHook) ListNodes() []NodeInfo {
+func (h *infragoHook) ListNodes() []NodeInfo {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
@@ -159,7 +159,7 @@ func (h *bamgooHook) ListNodes() []NodeInfo {
 	return h.bus.ListNodes()
 }
 
-func (h *bamgooHook) ListServices() []ServiceInfo {
+func (h *infragoHook) ListServices() []ServiceInfo {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
@@ -168,7 +168,7 @@ func (h *bamgooHook) ListServices() []ServiceInfo {
 	return h.bus.ListServices()
 }
 
-func (h *bamgooHook) Begin(meta *Meta, name string, attrs base.Map) TraceSpan {
+func (h *infragoHook) Begin(meta *Meta, name string, attrs base.Map) TraceSpan {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.trace == nil {
@@ -177,7 +177,7 @@ func (h *bamgooHook) Begin(meta *Meta, name string, attrs base.Map) TraceSpan {
 	return h.trace.Begin(meta, name, attrs)
 }
 
-func (h *bamgooHook) Trace(meta *Meta, name string, status string, attrs base.Map) error {
+func (h *infragoHook) Trace(meta *Meta, name string, status string, attrs base.Map) error {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.trace == nil {

@@ -1,4 +1,4 @@
-package bamgoo
+package infra
 
 // ServiceStats contains service statistics.
 type ServiceStats struct {

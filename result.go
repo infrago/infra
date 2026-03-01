@@ -1,10 +1,10 @@
-package bamgoo
+package infra
 
 import (
 	"fmt"
 	"strings"
 
-	. "github.com/bamgoo/base"
+	. "github.com/infrago/base"
 )
 
 var (

@@ -1,4 +1,4 @@
-package bamgoo
+package infra
 
 import (
 	"path"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	. "github.com/bamgoo/base"
+	. "github.com/infrago/base"
 )
 
 var registry = &registerRegistry{
@@ -88,7 +88,7 @@ func (r *registerRegistry) Register(name string, value Any) {
 
 	// no component => keep existing behavior (register immediately)
 	if component == "" {
-		bamgoo.Register(name, value)
+		infra.Register(name, value)
 		return
 	}
 
@@ -96,7 +96,7 @@ func (r *registerRegistry) Register(name string, value Any) {
 	defer r.mutex.Unlock()
 
 	if r.applied {
-		bamgoo.Register(name, value)
+		infra.Register(name, value)
 		return
 	}
 
@@ -148,7 +148,7 @@ func (r *registerRegistry) Apply(selected ...string) {
 		if len(matchers) > 0 && !matchesAny(entry.key, matchers) {
 			continue
 		}
-		bamgoo.Register(entry.name, entry.value)
+		infra.Register(entry.name, entry.value)
 	}
 }
 

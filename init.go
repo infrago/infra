@@ -1,4 +1,4 @@
-package bamgoo
+package infra
 
 func init() {
 	Mount(core)

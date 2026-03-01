@@ -1,13 +1,13 @@
-package bamgoo
+package infra
 
 import (
-	. "github.com/bamgoo/base"
+	. "github.com/infrago/base"
 )
 
-var host = &bamgooHost{}
+var host = &infragoHost{}
 
 type (
-	bamgooHost struct {
+	infragoHost struct {
 	}
 
 	Host interface {
@@ -16,10 +16,10 @@ type (
 	}
 )
 
-func (h *bamgooHost) InvokeLocal(meta *Meta, name string, value Map) (Map, Res, bool) {
+func (h *infragoHost) InvokeLocal(meta *Meta, name string, value Map) (Map, Res, bool) {
 	return core.invokeLocal(meta, name, value)
 }
 
-func (h *bamgooHost) RegisterLocal(name string, value Any) {
-	bamgoo.Register(name, value)
+func (h *infragoHost) RegisterLocal(name string, value Any) {
+	infra.Register(name, value)
 }

@@ -1,4 +1,4 @@
-package bamgoo
+package infra
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/bamgoo/base"
+	. "github.com/infrago/base"
 	"github.com/pelletier/go-toml/v2"
 )
 

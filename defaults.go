@@ -1,4 +1,4 @@
-package bamgoo
+package infra
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	base "github.com/bamgoo/base"
+	base "github.com/infrago/base"
 	"github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -112,10 +112,10 @@ func parseConfigEnv() base.Map {
 		}
 		key := parts[0]
 		val := parts[1]
-		if !strings.HasPrefix(key, "BAMGOO_") {
+		if !strings.HasPrefix(key, "INFRAGO_") {
 			continue
 		}
-		k := strings.ToLower(strings.TrimPrefix(key, "BAMGOO_"))
+		k := strings.ToLower(strings.TrimPrefix(key, "INFRAGO_"))
 		params[k] = val
 	}
 	return params

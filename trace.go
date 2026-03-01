@@ -1,8 +1,8 @@
-package bamgoo
+package infra
 
 import "strings"
 
-import . "github.com/bamgoo/base"
+import . "github.com/infrago/base"
 
 const (
 	TraceKindMethod  = "method"

@@ -1,10 +1,10 @@
-package bamgoo
+package infra
 
 import (
 	"strings"
 	"sync"
 
-	. "github.com/bamgoo/base"
+	. "github.com/infrago/base"
 )
 
 var library = &libraryModule{

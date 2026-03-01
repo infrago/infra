@@ -1,12 +1,12 @@
-package bamgoo
+package infra
 
 import (
-	. "github.com/bamgoo/base"
+	. "github.com/infrago/base"
 )
 
-// Mount attaches a module into the bamgoo runtime and returns a host.
+// Mount attaches a module into the infrago runtime and returns a host.
 func Mount(mod Module) Host {
-	return bamgoo.Mount(mod)
+	return infra.Mount(mod)
 }
 
 // Register registers anything into mounted modules.
@@ -34,11 +34,11 @@ func RegisterProfile(key string, profile Profile) {
 // Prepare initializes and opens modules without starting them.
 func Prepare(profile ...string) {
 	requested := normalizeProfiles(profile...)
-	bamgoo.setRequestedProfiles(requested)
-	bamgoo.Load()
-	registry.Apply(bamgoo.EffectiveProfiles()...)
-	bamgoo.Setup()
-	bamgoo.Open()
+	infra.setRequestedProfiles(requested)
+	infra.Load()
+	registry.Apply(infra.EffectiveProfiles()...)
+	infra.Setup()
+	infra.Open()
 }
 
 // Ready is an alias of Prepare for compatibility.
@@ -49,15 +49,15 @@ func Ready(profile ...string) {
 // Run starts the full lifecycle and blocks until stop.
 func Run(profile ...string) {
 	requested := normalizeProfiles(profile...)
-	bamgoo.setRequestedProfiles(requested)
-	bamgoo.Load()
-	registry.Apply(bamgoo.EffectiveProfiles()...)
-	bamgoo.Setup()
-	bamgoo.Open()
-	bamgoo.Start()
-	bamgoo.Wait()
-	bamgoo.Stop()
-	bamgoo.Close()
+	infra.setRequestedProfiles(requested)
+	infra.Load()
+	registry.Apply(infra.EffectiveProfiles()...)
+	infra.Setup()
+	infra.Open()
+	infra.Start()
+	infra.Wait()
+	infra.Stop()
+	infra.Close()
 }
 
 // Go is an alias of Run for compatibility.
@@ -67,15 +67,15 @@ func Go(profile ...string) {
 
 // Override controls whether registrations can overwrite existing entries.
 func Override(args ...bool) bool {
-	return bamgoo.Override(args...)
+	return infra.Override(args...)
 }
 
-func Identity() bamgooIdentity {
-	return bamgoo.Identity()
+func Identity() infragoIdentity {
+	return infra.Identity()
 }
 
 func Node() string {
-	return bamgoo.Node()
+	return infra.Node()
 }
 
 // Invoke executes one entry as a new request context.
