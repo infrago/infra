@@ -26,8 +26,10 @@ type (
 
 		result Res
 
-		payload Map
-		id      string
+		payload    Map
+		id         string
+		tokenValid bool
+		tokenAuth  bool
 
 		spanStack []metaSpanFrame
 	}
@@ -214,37 +216,115 @@ func (m *Meta) Timezone(zones ...*time.Location) *time.Location {
 func (m *Meta) Token(v ...string) string {
 	if len(v) > 0 {
 		m.token = v[0]
+		m.clearTokenState()
 	}
 	return m.token
 }
 
-// Verify stores token into meta. Placeholder for signature verification.
+// Verify validates token signature and payload.
 func (m *Meta) Verify(token string) error {
 	if token == "" {
+		m.token = ""
+		m.clearTokenState()
 		return nil
 	}
+
 	m.token = token
+	m.clearTokenState()
+
+	session, err := hook.VerifyToken(m, token)
+	if err != nil {
+		return err
+	}
+
+	m.id = session.TokenID
+	m.payload = session.Payload
+	m.tokenAuth = session.Auth
+	m.tokenValid = true
 	return nil
 }
 
-// Signed returns whether token is present (placeholder for signature verification).
-func (m *Meta) Signed(_ ...string) bool {
-	return m.token != ""
+// Sign issues token with current token id.
+func (m *Meta) Sign(auth bool, payload Map, expires time.Duration, roles ...string) string {
+	req := TokenSignRequest{
+		Auth:    auth,
+		Payload: payload,
+		Expires: expires,
+		NewID:   false,
+		Role:    formatTokenRole(roles...),
+		TokenID: m.id,
+	}
+	session, err := hook.SignToken(m, req)
+	if err != nil {
+		m.Result(errorResult(err))
+		return ""
+	}
+	m.token = session.Token
+	m.id = session.TokenID
+	m.payload = session.Payload
+	m.tokenAuth = session.Auth
+	m.tokenValid = true
+	return session.Token
+}
+
+// NewSign issues token with a new token id.
+func (m *Meta) NewSign(auth bool, payload Map, expires time.Duration, roles ...string) string {
+	req := TokenSignRequest{
+		Auth:    auth,
+		Payload: payload,
+		Expires: expires,
+		NewID:   true,
+		Role:    formatTokenRole(roles...),
+	}
+	session, err := hook.SignToken(m, req)
+	if err != nil {
+		m.Result(errorResult(err))
+		return ""
+	}
+	m.token = session.Token
+	m.id = session.TokenID
+	m.payload = session.Payload
+	m.tokenAuth = session.Auth
+	m.tokenValid = true
+	return session.Token
+}
+
+// RevokeToken revokes one raw token.
+func (m *Meta) RevokeToken(token string, expires ...int64) error {
+	exp := int64(0)
+	if len(expires) > 0 {
+		exp = expires[0]
+	}
+	return hook.RevokeToken(m, token, exp)
+}
+
+// RevokeTokenID revokes one token id.
+func (m *Meta) RevokeTokenID(tokenID string, expires ...int64) error {
+	exp := int64(0)
+	if len(expires) > 0 {
+		exp = expires[0]
+	}
+	return hook.RevokeTokenID(m, tokenID, exp)
+}
+
+// Signed returns whether token is valid.
+func (m *Meta) Signed() bool {
+	return m.tokenValid
 }
 
 // Unsigned is the negation of Signed.
-func (m *Meta) Unsigned(roles ...string) bool {
-	return !m.Signed(roles...)
+func (m *Meta) Unsigned() bool {
+	return !m.Signed()
 }
 
-// Authed returns whether token is present (placeholder for auth verification).
-func (m *Meta) Authed(_ ...string) bool {
-	return m.token != ""
+// Authed returns whether token is valid and auth flag is true.
+func (m *Meta) Authed() bool {
+	return m.tokenValid && m.tokenAuth
 }
 
 // Unauthed is the negation of Authed.
-func (m *Meta) Unauthed(roles ...string) bool {
-	return !m.Authed(roles...)
+func (m *Meta) Unauthed() bool {
+	return !m.Authed()
 }
 
 // TokenId returns token id placeholder.
@@ -283,8 +363,7 @@ func (m *Meta) Metadata(data ...Metadata) Metadata {
 		m.parentSpanId = d.ParentSpanId
 		m.language = d.Language
 		m.timezone = d.Timezone
-		m.token = d.Token
-
+		m.Token(d.Token)
 		if d.Token != "" {
 			_ = m.Verify(d.Token)
 		}
@@ -391,6 +470,13 @@ func mergeMetaAttrs(items ...Map) Map {
 		}
 	}
 	return out
+}
+
+func (m *Meta) clearTokenState() {
+	m.tokenValid = false
+	m.tokenAuth = false
+	m.id = ""
+	m.payload = nil
 }
 
 // Context carries invocation data for method/service.

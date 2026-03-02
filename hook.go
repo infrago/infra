@@ -11,6 +11,7 @@ import (
 var (
 	errBusHookMissing    = errors.New("bus hook not registered")
 	errConfigHookMissing = errors.New("config hook not registered")
+	errTokenHookMissing  = errors.New("token hook not registered")
 )
 
 // Hook exposes hook registrations and access (main -> sub).
@@ -27,6 +28,7 @@ type (
 		bus    BusHook
 		config ConfigHook
 		trace  TraceHook
+		token  TokenHook
 	}
 
 	BusHook interface {
@@ -47,6 +49,13 @@ type (
 		Begin(meta *Meta, name string, attrs base.Map) TraceSpan
 		Trace(meta *Meta, name string, status string, attrs base.Map) error
 	}
+
+	TokenHook interface {
+		Sign(meta *Meta, req TokenSignRequest) (TokenSession, error)
+		Verify(meta *Meta, token string) (TokenSession, error)
+		RevokeToken(meta *Meta, token string, expires int64) error
+		RevokeTokenID(meta *Meta, tokenID string, expires int64) error
+	}
 )
 
 // Attach dispatches Module.Attach based on type.
@@ -58,6 +67,8 @@ func (h *infragoHook) Attach(value base.Any) {
 		h.AttachConfig(v)
 	case TraceHook:
 		h.AttachTrace(v)
+	case TokenHook:
+		h.AttachToken(v)
 	}
 }
 
@@ -92,6 +103,17 @@ func (h *infragoHook) AttachTrace(hook TraceHook) {
 	}
 
 	h.trace = hook
+}
+
+func (h *infragoHook) AttachToken(hook TokenHook) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	if hook == nil {
+		panic("Invalid token hook")
+	}
+
+	h.token = hook
 }
 
 func (h *infragoHook) LoadConfig() (base.Map, error) {
@@ -184,6 +206,42 @@ func (h *infragoHook) Trace(meta *Meta, name string, status string, attrs base.M
 		return nil
 	}
 	return h.trace.Trace(meta, name, status, attrs)
+}
+
+func (h *infragoHook) SignToken(meta *Meta, req TokenSignRequest) (TokenSession, error) {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.token == nil {
+		return TokenSession{}, errTokenHookMissing
+	}
+	return h.token.Sign(meta, req)
+}
+
+func (h *infragoHook) VerifyToken(meta *Meta, token string) (TokenSession, error) {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.token == nil {
+		return TokenSession{}, errTokenHookMissing
+	}
+	return h.token.Verify(meta, token)
+}
+
+func (h *infragoHook) RevokeToken(meta *Meta, token string, expires int64) error {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.token == nil {
+		return errTokenHookMissing
+	}
+	return h.token.RevokeToken(meta, token, expires)
+}
+
+func (h *infragoHook) RevokeTokenID(meta *Meta, tokenID string, expires int64) error {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.token == nil {
+		return errTokenHookMissing
+	}
+	return h.token.RevokeTokenID(meta, tokenID, expires)
 }
 
 type noopTraceSpan struct{}
