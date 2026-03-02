@@ -782,28 +782,3 @@ func Match(regular, value string) bool {
 func Types() map[string]Type {
 	return basic.Types()
 }
-
-// RegisterMime registers one mime mapping.
-func RegisterMime(name string, config Mime) {
-	basic.RegisterMime(name, config)
-}
-
-// RegisterMimes registers mime mappings in batch.
-func RegisterMimes(config Mimes) {
-	basic.RegisterMimes(config)
-}
-
-// RegisterRegular registers one regular expression set.
-func RegisterRegular(name string, config Regular) {
-	basic.RegisterRegular(name, config)
-}
-
-// RegisterRegulars registers regular expression sets in batch.
-func RegisterRegulars(config Regulars) {
-	basic.RegisterRegulars(config)
-}
-
-// RegisterType registers one type definition.
-func RegisterType(name string, config Type) {
-	basic.RegisterType(name, config)
-}

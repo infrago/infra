@@ -266,16 +266,6 @@ func Unmarshal(name string, data []byte, obj Any) error  { return codec.Unmarsha
 func Encrypt(name string, obj Any) (string, error)       { return codec.Encrypt(name, obj) }
 func Decrypt(name string, obj Any) (Any, error)          { return codec.Decrypt(name, obj) }
 
-// RegisterCodec registers one codec implementation.
-func RegisterCodec(name string, config Codec) {
-	codec.RegisterCodec(name, config)
-}
-
-// RegisterCodecs registers codec implementations in batch.
-func RegisterCodecs(config Codecs) {
-	codec.RegisterCodecs(config)
-}
-
 // CodecTextAlphabet returns configured text alphabet.
 func CodecTextAlphabet() string {
 	return codec.config.Text
