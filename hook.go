@@ -51,10 +51,10 @@ type (
 	}
 
 	TokenHook interface {
-		Sign(meta *Meta, req TokenSignRequest) (TokenSession, error)
-		Verify(meta *Meta, token string) (TokenSession, error)
-		RevokeToken(meta *Meta, token string, expires int64) error
-		RevokeTokenID(meta *Meta, tokenID string, expires int64) error
+		Sign(req Token) (string, error)
+		Verify(token string) (Token, error)
+		RevokeToken(token string, expires int64) error
+		RevokeTokenID(tokenID string, expires int64) error
 	}
 )
 
@@ -208,40 +208,40 @@ func (h *infragoHook) Trace(meta *Meta, name string, status string, attrs base.M
 	return h.trace.Trace(meta, name, status, attrs)
 }
 
-func (h *infragoHook) SignToken(meta *Meta, req TokenSignRequest) (TokenSession, error) {
+func (h *infragoHook) SignToken(req Token) (string, error) {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.token == nil {
-		return TokenSession{}, errTokenHookMissing
+		return "", errTokenHookMissing
 	}
-	return h.token.Sign(meta, req)
+	return h.token.Sign(req)
 }
 
-func (h *infragoHook) VerifyToken(meta *Meta, token string) (TokenSession, error) {
+func (h *infragoHook) VerifyToken(token string) (Token, error) {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.token == nil {
-		return TokenSession{}, errTokenHookMissing
+		return Token{}, errTokenHookMissing
 	}
-	return h.token.Verify(meta, token)
+	return h.token.Verify(token)
 }
 
-func (h *infragoHook) RevokeToken(meta *Meta, token string, expires int64) error {
+func (h *infragoHook) RevokeToken(token string, expires int64) error {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.token == nil {
 		return errTokenHookMissing
 	}
-	return h.token.RevokeToken(meta, token, expires)
+	return h.token.RevokeToken(token, expires)
 }
 
-func (h *infragoHook) RevokeTokenID(meta *Meta, tokenID string, expires int64) error {
+func (h *infragoHook) RevokeTokenID(tokenID string, expires int64) error {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.token == nil {
 		return errTokenHookMissing
 	}
-	return h.token.RevokeTokenID(meta, tokenID, expires)
+	return h.token.RevokeTokenID(tokenID, expires)
 }
 
 type noopTraceSpan struct{}

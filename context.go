@@ -27,7 +27,7 @@ type (
 		result Res
 
 		payload    Map
-		id         string
+		tokenId    string
 		tokenValid bool
 		tokenAuth  bool
 
@@ -232,12 +232,12 @@ func (m *Meta) Verify(token string) error {
 	m.token = token
 	m.clearTokenState()
 
-	session, err := hook.VerifyToken(m, token)
+	session, err := hook.VerifyToken(token)
 	if err != nil {
 		return err
 	}
 
-	m.id = session.TokenID
+	m.tokenId = session.TokenID
 	m.payload = session.Payload
 	m.tokenAuth = session.Auth
 	m.tokenValid = true
@@ -245,48 +245,87 @@ func (m *Meta) Verify(token string) error {
 }
 
 // Sign issues token with current token id.
-func (m *Meta) Sign(auth bool, payload Map, expires time.Duration, roles ...string) string {
-	req := TokenSignRequest{
+// expires is optional duration, begin defaults to current time.
+func (m *Meta) Sign(auth bool, payload Map, expires ...time.Duration) string {
+	return m.SignAt(auth, payload, time.Now(), expires...)
+}
+
+// SignAt issues token with current token id and custom begin time.
+// expires is optional duration.
+func (m *Meta) SignAt(auth bool, payload Map, begin time.Time, expires ...time.Duration) string {
+	beginUnix, expireUnix := tokenTimeWindow(begin, expires...)
+	tokenID := m.tokenId
+	if tokenID == "" {
+		tokenID = Generate()
+	}
+	req := Token{
 		Auth:    auth,
 		Payload: payload,
-		Expires: expires,
+		Begin:   beginUnix,
+		Expires: expireUnix,
 		NewID:   false,
-		Role:    formatTokenRole(roles...),
-		TokenID: m.id,
+		TokenID: tokenID,
 	}
-	session, err := hook.SignToken(m, req)
+	token, err := hook.SignToken(req)
 	if err != nil {
 		m.Result(errorResult(err))
 		return ""
 	}
-	m.token = session.Token
-	m.id = session.TokenID
-	m.payload = session.Payload
-	m.tokenAuth = session.Auth
+	if req.Payload == nil {
+		req.Payload = Map{}
+	}
+	m.token = token
+	m.tokenId = req.TokenID
+	m.payload = req.Payload
+	m.tokenAuth = req.Auth
 	m.tokenValid = true
-	return session.Token
+	return token
 }
 
 // NewSign issues token with a new token id.
-func (m *Meta) NewSign(auth bool, payload Map, expires time.Duration, roles ...string) string {
-	req := TokenSignRequest{
+// expires is optional duration, begin defaults to current time.
+func (m *Meta) NewSign(auth bool, payload Map, expires ...time.Duration) string {
+	return m.NewSignAt(auth, payload, time.Now(), expires...)
+}
+
+// NewSignAt issues token with a new token id and custom begin time.
+// expires is optional duration.
+func (m *Meta) NewSignAt(auth bool, payload Map, begin time.Time, expires ...time.Duration) string {
+	beginUnix, expireUnix := tokenTimeWindow(begin, expires...)
+	req := Token{
 		Auth:    auth,
 		Payload: payload,
-		Expires: expires,
+		Begin:   beginUnix,
+		Expires: expireUnix,
 		NewID:   true,
-		Role:    formatTokenRole(roles...),
+		TokenID: Generate(),
 	}
-	session, err := hook.SignToken(m, req)
+	token, err := hook.SignToken(req)
 	if err != nil {
 		m.Result(errorResult(err))
 		return ""
 	}
-	m.token = session.Token
-	m.id = session.TokenID
-	m.payload = session.Payload
-	m.tokenAuth = session.Auth
+	if req.Payload == nil {
+		req.Payload = Map{}
+	}
+	m.token = token
+	m.tokenId = req.TokenID
+	m.payload = req.Payload
+	m.tokenAuth = req.Auth
 	m.tokenValid = true
-	return session.Token
+	return token
+}
+
+func tokenTimeWindow(begin time.Time, expires ...time.Duration) (int64, int64) {
+	if begin.IsZero() {
+		begin = time.Now()
+	}
+	beginUnix := begin.Unix()
+	expireUnix := int64(0)
+	if len(expires) > 0 && expires[0] > 0 {
+		expireUnix = beginUnix + int64(expires[0].Seconds())
+	}
+	return beginUnix, expireUnix
 }
 
 // RevokeToken revokes one raw token.
@@ -295,7 +334,7 @@ func (m *Meta) RevokeToken(token string, expires ...int64) error {
 	if len(expires) > 0 {
 		exp = expires[0]
 	}
-	return hook.RevokeToken(m, token, exp)
+	return hook.RevokeToken(token, exp)
 }
 
 // RevokeTokenID revokes one token id.
@@ -304,7 +343,7 @@ func (m *Meta) RevokeTokenID(tokenID string, expires ...int64) error {
 	if len(expires) > 0 {
 		exp = expires[0]
 	}
-	return hook.RevokeTokenID(m, tokenID, exp)
+	return hook.RevokeTokenID(tokenID, exp)
 }
 
 // Signed returns whether token is valid.
@@ -329,7 +368,7 @@ func (m *Meta) Unauthed() bool {
 
 // TokenId returns token id placeholder.
 func (m *Meta) TokenId() string {
-	return m.id
+	return m.tokenId
 }
 
 // Payload returns token payload placeholder.
@@ -475,7 +514,7 @@ func mergeMetaAttrs(items ...Map) Map {
 func (m *Meta) clearTokenState() {
 	m.tokenValid = false
 	m.tokenAuth = false
-	m.id = ""
+	m.tokenId = ""
 	m.payload = nil
 }
 

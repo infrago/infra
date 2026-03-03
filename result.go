@@ -89,6 +89,11 @@ func (res *result) Error() string {
 	return text
 }
 
+// String returns the same message as Error, so fmt output is explicit.
+func (res *result) String() string {
+	return res.Error()
+}
+
 func newResult(code int, text string, args ...Any) Res {
 	return &result{code, text, args, false}
 }
