@@ -21,7 +21,6 @@ type Token struct {
 	Payload Map
 	Begin   int64
 	Expires int64
-	NewID   bool
 }
 
 var (
@@ -52,8 +51,8 @@ func newDefaultTokenHook() *defaultTokenHook {
 
 func (h *defaultTokenHook) Sign(req Token) (string, error) {
 	tokenID := req.TokenID
-	if tokenID == "" || req.NewID {
-		tokenID = Generate()
+	if tokenID == "" {
+		tokenID = GenerateTokenID(defaultTokenIDLength())
 	}
 
 	header := defaultTokenHeader{
@@ -222,6 +221,17 @@ func defaultTokenCodec() string {
 	return GOB
 }
 
+func defaultTokenIDLength() int {
+	infrago.mutex.RLock()
+	defer infrago.mutex.RUnlock()
+
+	length := settingInt(infrago.setting["token.idLength"])
+	if length <= 0 {
+		length = settingInt(infrago.setting["token.idlength"])
+	}
+	return normalizeTokenIDLength(length)
+}
+
 func defaultTokenSetting(key string) string {
 	infrago.mutex.RLock()
 	defer infrago.mutex.RUnlock()
@@ -229,6 +239,37 @@ func defaultTokenSetting(key string) string {
 		return v
 	}
 	return ""
+}
+
+func settingInt(v Any) int {
+	switch vv := v.(type) {
+	case int:
+		return vv
+	case int8:
+		return int(vv)
+	case int16:
+		return int(vv)
+	case int32:
+		return int(vv)
+	case int64:
+		return int(vv)
+	case uint:
+		return int(vv)
+	case uint8:
+		return int(vv)
+	case uint16:
+		return int(vv)
+	case uint32:
+		return int(vv)
+	case uint64:
+		return int(vv)
+	case float32:
+		return int(vv)
+	case float64:
+		return int(vv)
+	default:
+		return 0
+	}
 }
 
 func defaultTokenHMACSign(data string, key string) (string, error) {

@@ -256,14 +256,13 @@ func (m *Meta) SignAt(auth bool, payload Map, begin time.Time, expires ...time.D
 	beginUnix, expireUnix := tokenTimeWindow(begin, expires...)
 	tokenID := m.tokenId
 	if tokenID == "" {
-		tokenID = Generate()
+		tokenID = GenerateTokenID()
 	}
 	req := Token{
 		Auth:    auth,
 		Payload: payload,
 		Begin:   beginUnix,
 		Expires: expireUnix,
-		NewID:   false,
 		TokenID: tokenID,
 	}
 	token, err := hook.SignToken(req)
@@ -297,8 +296,7 @@ func (m *Meta) NewSignAt(auth bool, payload Map, begin time.Time, expires ...tim
 		Payload: payload,
 		Begin:   beginUnix,
 		Expires: expireUnix,
-		NewID:   true,
-		TokenID: Generate(),
+		TokenID: GenerateTokenID(),
 	}
 	token, err := hook.SignToken(req)
 	if err != nil {
