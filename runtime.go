@@ -1,6 +1,7 @@
 package infra
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -325,9 +326,9 @@ func (c *infragoRuntime) Close() {
 
 // Wait blocks until system termination signal.
 func (c *infragoRuntime) Wait() {
-	waiter := make(chan os.Signal, 1)
-	signal.Notify(waiter, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	<-waiter
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	defer cancel()
+	<-ctx.Done()
 }
 
 // Override controls whether registrations can overwrite existing entries.
