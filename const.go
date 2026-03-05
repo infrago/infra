@@ -1,7 +1,7 @@
 package infra
 
 const (
-	INFRAGO  = "infrago"
+	INFRAGO = "infrago"
 	DEFAULT = "default"
 	GLOBAL  = "global"
 )
