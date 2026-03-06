@@ -3,7 +3,6 @@ package infra
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"hash/fnv"
 	"math/big"
 	"strconv"
@@ -249,7 +248,7 @@ func (module *codecModule) Encrypt(codecName string, v Any) (string, error) {
 	case []byte:
 		return string(vv), nil
 	default:
-		return fmt.Sprintf("%v", vv), nil
+		return "", errInvalidCodecData
 	}
 }
 

@@ -13,6 +13,7 @@
 - 生命周期（模块接口）：`Setup -> Open -> Start -> Stop -> Close`
 - 统一启动：`infra.Run()`
 - 统一调用：`infra.Invoke()`
+- 自定义配置：`infra.Setting()`
 - 模块挂载：模块通过 `infra.Mount(module)` 接入
 
 ## 最小可运行示例
@@ -41,4 +42,7 @@ port = 8100
 
 [log]
 driver = "default"
+
+[setting]
+tenant = "demo"
 ```

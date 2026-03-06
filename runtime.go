@@ -185,9 +185,7 @@ func (c *infragoRuntime) runtimeConfig(cfg Map) {
 		c.node = node
 	}
 	if setting, ok := cfg["setting"].(Map); ok {
-		for k, v := range setting {
-			c.setting[k] = v
-		}
+		mergeMap(c.setting, setting)
 	}
 	if profile, ok := cfg["profile"].(string); ok {
 		profile = normalizeToken(profile)

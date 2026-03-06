@@ -70,12 +70,20 @@ func Override(args ...bool) bool {
 	return infrago.Override(args...)
 }
 
+func Setting() Map {
+	return infrago.Setting()
+}
+
 func Identity() infragoIdentity {
 	return infrago.Identity()
 }
 
 func Node() string {
 	return infrago.Node()
+}
+
+func Arguments(name string, extends ...Vars) Vars {
+	return core.Arguments(name, extends...)
 }
 
 // Invoke executes one entry as a new request context.

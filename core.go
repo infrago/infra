@@ -194,6 +194,21 @@ func (e *coreModule) Wait() {
 	<-waiter
 }
 
+func (e *coreModule) Arguments(name string, extends ...Vars) Vars {
+	e.mutex.RLock()
+	entry, ok := e.entries[name]
+	e.mutex.RUnlock()
+
+	args := Vars{}
+	if ok {
+		for key, val := range entry.Args {
+			args[key] = val
+		}
+	}
+
+	return extendVars(args, extends...)
+}
+
 // Invoke calls a method/service (local first, then remote via bus).
 func (e *coreModule) Invoke(meta *Meta, name string, value Map, settings ...Map) (Map, Res) {
 	if meta == nil {
