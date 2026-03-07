@@ -352,10 +352,10 @@ func invokeAction(action Any, ctx *Context) (Map, Res) {
 		return data, defaultResult(res)
 	case func(*Context) (Map, []Map):
 		data, items := fn(ctx)
-		return mergeInvokeListData(data, items), OK
+		return packInvokeListData(data, items), OK
 	case func(*Context) (Map, []Map, Res):
 		data, items, res := fn(ctx)
-		return mergeInvokeListData(data, items), defaultResult(res)
+		return packInvokeListData(data, items), defaultResult(res)
 	case func(*Context) (int64, []Map):
 		total, items := fn(ctx)
 		return Map{
@@ -373,13 +373,11 @@ func invokeAction(action Any, ctx *Context) (Map, Res) {
 	}
 }
 
-func mergeInvokeListData(data Map, items []Map) Map {
-	out := Map{}
-	for k, v := range data {
-		out[k] = v
+func packInvokeListData(item Map, items []Map) Map {
+	return Map{
+		"item":  item,
+		"items": items,
 	}
-	out["items"] = items
-	return out
 }
 
 func normalizeActionData(data Any) Map {

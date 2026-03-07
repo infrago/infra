@@ -28,6 +28,9 @@ func TestInvokeListTopLevel(t *testing.T) {
 	if data["summary"] != "ok" {
 		t.Fatalf("expected summary=ok, got %#v", data["summary"])
 	}
+	if _, ok := data["items"]; ok {
+		t.Fatalf("expected returned item to not include items")
+	}
 	if len(items) != 2 {
 		t.Fatalf("expected 2 items, got %d", len(items))
 	}
@@ -53,8 +56,8 @@ func TestInvokeListMeta(t *testing.T) {
 	if len(items) != 3 {
 		t.Fatalf("expected 3 items, got %d", len(items))
 	}
-	if _, ok := data["items"]; !ok {
-		t.Fatalf("expected data.items to exist")
+	if len(data) != 0 {
+		t.Fatalf("expected returned item to be empty map, got %#v", data)
 	}
 	if res := meta.Result(); res == nil || res.Fail() {
 		t.Fatalf("expected meta result to be ok")
@@ -102,6 +105,9 @@ func TestInvokeListSupportsActionReturnMapAndItems(t *testing.T) {
 	if data["summary"] != "ok" {
 		t.Fatalf("expected summary=ok, got %#v", data["summary"])
 	}
+	if _, ok := data["items"]; ok {
+		t.Fatalf("expected returned item to not include items")
+	}
 	if len(items) != 2 {
 		t.Fatalf("expected 2 items, got %d", len(items))
 	}
@@ -126,6 +132,9 @@ func TestInvokeListSupportsActionReturnMapItemsRes(t *testing.T) {
 	data, items := meta.InvokeList("demo.combo.res")
 	if data["summary"] != "ok" {
 		t.Fatalf("expected summary=ok, got %#v", data["summary"])
+	}
+	if _, ok := data["items"]; ok {
+		t.Fatalf("expected returned item to not include items")
 	}
 	if len(items) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(items))

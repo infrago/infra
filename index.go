@@ -98,7 +98,7 @@ func Invoke(name string, values ...Map) (Map, Res) {
 // InvokeList executes one entry and returns response data with parsed "items" list.
 func InvokeList(name string, values ...Map) (Map, []Map) {
 	data, _ := Invoke(name, values...)
-	return data, invokeItems(data)
+	return invokeListData(data)
 }
 
 // Invokes executes one entry and returns response items list.
@@ -176,6 +176,30 @@ func invokeItems(data Map) []Map {
 	default:
 		return []Map{}
 	}
+}
+
+func invokeItem(data Map) Map {
+	if data == nil {
+		return Map{}
+	}
+	if raw, ok := data["item"]; ok {
+		if item, ok := raw.(Map); ok && item != nil {
+			return item
+		}
+		return Map{}
+	}
+	item := Map{}
+	for k, v := range data {
+		if k == "items" {
+			continue
+		}
+		item[k] = v
+	}
+	return item
+}
+
+func invokeListData(data Map) (Map, []Map) {
+	return invokeItem(data), invokeItems(data)
 }
 
 func invokeTotal(data Map) (int64, bool) {

@@ -448,7 +448,7 @@ func (m *Meta) Invoke(name string, values ...Map) Map {
 // InvokeList executes one call and also returns parsed "items" list from response data.
 func (m *Meta) InvokeList(name string, values ...Map) (Map, []Map) {
 	data := m.Invoke(name, values...)
-	return data, invokeItems(data)
+	return invokeListData(data)
 }
 
 // Invokes executes one call and returns response items list.
