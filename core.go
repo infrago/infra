@@ -330,6 +330,9 @@ func invokeAction(action Any, ctx *Context) (Map, Res) {
 		return fn(ctx), OK
 	case func(*Context) []Map:
 		return Map{"items": fn(ctx)}, OK
+	case func(*Context) ([]Map, Res):
+		items, res := fn(ctx)
+		return Map{"items": items}, defaultResult(res)
 	case func(*Context) bool:
 		return Map{"ok": fn(ctx)}, OK
 	case func(*Context) Res:
@@ -347,9 +350,36 @@ func invokeAction(action Any, ctx *Context) (Map, Res) {
 	case func(*Context) (Map, Res):
 		data, res := fn(ctx)
 		return data, defaultResult(res)
+	case func(*Context) (Map, []Map):
+		data, items := fn(ctx)
+		return mergeInvokeListData(data, items), OK
+	case func(*Context) (Map, []Map, Res):
+		data, items, res := fn(ctx)
+		return mergeInvokeListData(data, items), defaultResult(res)
+	case func(*Context) (int64, []Map):
+		total, items := fn(ctx)
+		return Map{
+			"total": total,
+			"items": items,
+		}, OK
+	case func(*Context) (int64, []Map, Res):
+		total, items, res := fn(ctx)
+		return Map{
+			"total": total,
+			"items": items,
+		}, defaultResult(res)
 	default:
 		return nil, Fail.With("invalid action signature")
 	}
+}
+
+func mergeInvokeListData(data Map, items []Map) Map {
+	out := Map{}
+	for k, v := range data {
+		out[k] = v
+	}
+	out["items"] = items
+	return out
 }
 
 func normalizeActionData(data Any) Map {

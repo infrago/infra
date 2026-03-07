@@ -95,38 +95,31 @@ func Invoke(name string, values ...Map) (Map, Res) {
 	return core.Invoke(nil, name, value)
 }
 
-// Invokes executes multiple entries and returns results in order.
-func Invokes(name string, values ...Map) ([]Map, Res) {
-	if len(values) == 0 {
-		return []Map{}, OK
-	}
-	results := make([]Map, 0, len(values))
-	for _, value := range values {
-		data, res := Invoke(name, value)
-		if res != nil && res.Fail() {
-			return results, res
-		}
-		results = append(results, data)
-	}
-	return results, OK
+// InvokeList executes one entry and returns response data with parsed "items" list.
+func InvokeList(name string, values ...Map) (Map, []Map) {
+	data, _ := Invoke(name, values...)
+	return data, invokeItems(data)
 }
 
-// Invoking executes a paged subset of calls and returns total input count.
+// Invokes executes one entry and returns response items list.
+func Invokes(name string, values ...Map) ([]Map, Res) {
+	data, res := Invoke(name, values...)
+	return invokeItems(data), res
+}
+
+// Invoking executes one entry and returns paged items with total count.
 func Invoking(name string, offset, limit int, values ...Map) (int64, []Map) {
-	total := int64(len(values))
-	start, end := normalizeInvokeWindow(len(values), offset, limit)
+	data, _ := Invoke(name, values...)
+	items := invokeItems(data)
+	if total, ok := invokeTotal(data); ok {
+		return total, items
+	}
+	total := int64(len(items))
+	start, end := normalizeInvokeWindow(len(items), offset, limit)
 	if start >= end {
 		return total, []Map{}
 	}
-	results := make([]Map, 0, end-start)
-	for _, value := range values[start:end] {
-		data, res := Invoke(name, value)
-		if res != nil && res.Fail() {
-			return total, results
-		}
-		results = append(results, data)
-	}
-	return total, results
+	return total, items[start:end]
 }
 
 // InvokeOK executes one entry and returns whether result is OK.
@@ -158,6 +151,69 @@ func normalizeInvokeWindow(total, offset, limit int) (int, int) {
 		}
 	}
 	return offset, end
+}
+
+func invokeItems(data Map) []Map {
+	if data == nil {
+		return []Map{}
+	}
+	raw, ok := data["items"]
+	if !ok || raw == nil {
+		return []Map{}
+	}
+	switch items := raw.(type) {
+	case []Map:
+		return items
+	case []Any:
+		out := make([]Map, 0, len(items))
+		for _, item := range items {
+			switch v := item.(type) {
+			case Map:
+				out = append(out, v)
+			}
+		}
+		return out
+	default:
+		return []Map{}
+	}
+}
+
+func invokeTotal(data Map) (int64, bool) {
+	if data == nil {
+		return 0, false
+	}
+	raw, ok := data["total"]
+	if !ok || raw == nil {
+		return 0, false
+	}
+	switch v := raw.(type) {
+	case int:
+		return int64(v), true
+	case int8:
+		return int64(v), true
+	case int16:
+		return int64(v), true
+	case int32:
+		return int64(v), true
+	case int64:
+		return v, true
+	case uint:
+		return int64(v), true
+	case uint8:
+		return int64(v), true
+	case uint16:
+		return int64(v), true
+	case uint32:
+		return int64(v), true
+	case uint64:
+		return int64(v), true
+	case float32:
+		return int64(v), true
+	case float64:
+		return int64(v), true
+	default:
+		return 0, false
+	}
 }
 
 // Enqueue dispatches one async queued service request.

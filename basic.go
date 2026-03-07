@@ -529,7 +529,7 @@ func (this *basicModule) Mapping(config Vars, data Map, value Map, argn bool, pa
 		}
 
 		// children mapping
-		if fieldConfig.Children != nil && !(fieldMust == false && isEmptyValue(fieldValue)) {
+		if len(fieldConfig.Children) > 0 && !(fieldMust == false && isEmptyValue(fieldValue)) {
 			values, isArray := normalizeChildren(fieldValue)
 			out := make([]Map, 0, len(values))
 			for _, item := range values {

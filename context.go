@@ -445,44 +445,31 @@ func (m *Meta) Invoke(name string, values ...Map) Map {
 	return data
 }
 
-// Invokes executes multiple calls in order and stores last result on meta.
-func (m *Meta) Invokes(name string, values ...Map) []Map {
-	if len(values) == 0 {
-		m.result = OK
-		return []Map{}
-	}
-	results := make([]Map, 0, len(values))
-	for _, value := range values {
-		data, res := core.Invoke(m, name, value)
-		m.result = res
-		if res != nil && res.Fail() {
-			return results
-		}
-		results = append(results, data)
-	}
-	m.result = OK
-	return results
+// InvokeList executes one call and also returns parsed "items" list from response data.
+func (m *Meta) InvokeList(name string, values ...Map) (Map, []Map) {
+	data := m.Invoke(name, values...)
+	return data, invokeItems(data)
 }
 
-// Invoking executes a paged subset of calls and stores last result on meta.
+// Invokes executes one call and returns response items list.
+func (m *Meta) Invokes(name string, values ...Map) []Map {
+	data := m.Invoke(name, values...)
+	return invokeItems(data)
+}
+
+// Invoking executes one call and returns paged items from response.
 func (m *Meta) Invoking(name string, offset, limit int, values ...Map) (int64, []Map) {
-	total := int64(len(values))
-	start, end := normalizeInvokeWindow(len(values), offset, limit)
+	data := m.Invoke(name, values...)
+	items := invokeItems(data)
+	if total, ok := invokeTotal(data); ok {
+		return total, items
+	}
+	total := int64(len(items))
+	start, end := normalizeInvokeWindow(len(items), offset, limit)
 	if start >= end {
-		m.result = OK
 		return total, []Map{}
 	}
-	results := make([]Map, 0, end-start)
-	for _, value := range values[start:end] {
-		data, res := core.Invoke(m, name, value)
-		m.result = res
-		if res != nil && res.Fail() {
-			return total, results
-		}
-		results = append(results, data)
-	}
-	m.result = OK
-	return total, results
+	return total, items[start:end]
 }
 
 // InvokeOK executes one call and returns whether result is OK.
