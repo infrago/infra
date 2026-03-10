@@ -14,6 +14,7 @@ type ServiceStats struct {
 type NodeInfo struct {
 	Project  string   `json:"project"`
 	Node     string   `json:"node"`
+	Role     string   `json:"role"`
 	Profile  string   `json:"profile"`
 	Services []string `json:"services"`
 	Updated  int64    `json:"updated"`
@@ -22,6 +23,7 @@ type NodeInfo struct {
 // ServiceNode indicates one node serving a service.
 type ServiceNode struct {
 	Node    string `json:"node"`
+	Role    string `json:"role"`
 	Profile string `json:"profile"`
 }
 

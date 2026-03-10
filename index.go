@@ -82,6 +82,10 @@ func Node() string {
 	return infrago.Node()
 }
 
+func Role() string {
+	return infrago.Role()
+}
+
 func Arguments(name string, extends ...Vars) Vars {
 	return core.Arguments(name, extends...)
 }

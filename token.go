@@ -207,7 +207,7 @@ func defaultTokenSecret() string {
 	if env := strings.TrimSpace(os.Getenv("INFRAGO_TOKEN_SECRET")); env != "" {
 		return env
 	}
-	project, _, _ := infrago.runtimeInfo()
+	project, _, _, _ := infrago.runtimeInfo()
 	if project != "" {
 		return project
 	}

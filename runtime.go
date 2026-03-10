@@ -18,7 +18,7 @@ import (
 // infrago is the infrago runtime instance that drives module lifecycle.
 var infrago = &infragoRuntime{
 	modules: make([]Module, 0),
-	project: INFRAGO, profile: GLOBAL, node: "", setting: Map{}, runProfiles: []string{GLOBAL},
+	project: INFRAGO, profile: GLOBAL, role: GLOBAL, node: "", setting: Map{}, runProfiles: []string{GLOBAL},
 }
 
 type (
@@ -34,6 +34,7 @@ type (
 
 	infragoIdentity struct {
 		Project string `json:"project"`
+		Role    string `json:"role"`
 		Profile string `json:"profile"`
 		Node    string `json:"node"`
 	}
@@ -44,8 +45,10 @@ type infragoRuntime struct {
 	modules []Module
 
 	project       string
+	role          string
 	profile       string
 	runProfiles   []string
+	configRole    string
 	configProfile string
 	node          string
 	nodeSet       bool
@@ -76,6 +79,12 @@ func (c *infragoRuntime) Profile() string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.profile
+}
+
+func (c *infragoRuntime) Role() string {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.role
 }
 
 func (c *infragoRuntime) setRequestedProfiles(profiles []string) {
@@ -120,6 +129,7 @@ func (c *infragoRuntime) Identity() infragoIdentity {
 	defer c.mutex.RUnlock()
 	return infragoIdentity{
 		Project: c.project,
+		Role:    c.role,
 		Profile: c.profile,
 		Node:    c.node,
 	}
@@ -193,11 +203,23 @@ func (c *infragoRuntime) runtimeConfig(cfg Map) {
 			c.configProfile = profile
 		}
 	}
+	if role, ok := cfg["role"].(string); ok {
+		role = normalizeToken(role)
+		if role != "" {
+			c.configRole = role
+		}
+	}
 	if runtimeCfg, ok := cfg["infrago"].(Map); ok {
 		if profile, ok := runtimeCfg["profile"].(string); ok {
 			profile = normalizeToken(profile)
 			if profile != "" {
 				c.configProfile = profile
+			}
+		}
+		if role, ok := runtimeCfg["role"].(string); ok {
+			role = normalizeToken(role)
+			if role != "" {
+				c.configRole = role
 			}
 		}
 	}
@@ -231,6 +253,7 @@ func (c *infragoRuntime) Load() {
 	if selected := c.effectiveProfilesLocked(); len(selected) > 0 {
 		c.profile = selected[0]
 	}
+	c.role = c.effectiveRoleLocked(c.profile)
 	c.mutex.Unlock()
 
 	c.loadStatus = true
@@ -284,8 +307,8 @@ func (c *infragoRuntime) Start() {
 	// trigger can fire before late modules (e.g. bus) are fully ready.
 	trigger.Toggle(START)
 
-	project, profile, node := c.runtimeInfo()
-	fmt.Printf("infrago started: project=%s profile=%s node=%s\n", project, profile, node)
+	project, role, profile, node := c.runtimeInfo()
+	fmt.Printf("infrago started: project=%s role=%s profile=%s node=%s\n", project, role, profile, node)
 
 	c.startStatus = true
 }
@@ -311,7 +334,7 @@ func (c *infragoRuntime) Close() {
 	if c.closeStatus {
 		return
 	}
-	project, profile, node := c.runtimeInfo()
+	project, role, profile, node := c.runtimeInfo()
 	// close the modules in reverse order
 	for i := len(c.modules) - 1; i >= 0; i-- {
 		c.modules[i].Close()
@@ -319,7 +342,7 @@ func (c *infragoRuntime) Close() {
 	c.closeStatus = true
 	c.openStatus = false
 	c.setupStatus = false
-	fmt.Printf("infrago stopped: project=%s profile=%s node=%s\n", project, profile, node)
+	fmt.Printf("infrago stopped: project=%s role=%s profile=%s node=%s\n", project, role, profile, node)
 }
 
 // Wait blocks until system termination signal.
@@ -339,9 +362,10 @@ func (c *infragoRuntime) Override(args ...bool) bool {
 	return c.overrideStatus
 }
 
-func (c *infragoRuntime) runtimeInfo() (string, string, string) {
+func (c *infragoRuntime) runtimeInfo() (string, string, string, string) {
 	c.mutex.RLock()
 	project := c.project
+	role := c.role
 	profile := c.profile
 	node := c.node
 	c.mutex.RUnlock()
@@ -351,10 +375,13 @@ func (c *infragoRuntime) runtimeInfo() (string, string, string) {
 	if profile == "" {
 		profile = GLOBAL
 	}
+	if role == "" {
+		role = profile
+	}
 	if node == "" {
 		node = "-"
 	}
-	return project, profile, node
+	return project, role, profile, node
 }
 
 func (c *infragoRuntime) EffectiveProfiles() []string {
@@ -377,6 +404,19 @@ func (c *infragoRuntime) effectiveProfilesLocked() []string {
 		return out
 	}
 	return []string{GLOBAL}
+}
+
+func (c *infragoRuntime) effectiveRoleLocked(profile string) string {
+	if role, ok := bootstrapRole(); ok {
+		return role
+	}
+	if c.configRole != "" {
+		return c.configRole
+	}
+	if profile != "" {
+		return profile
+	}
+	return GLOBAL
 }
 
 func bootstrapNode() (string, bool) {
@@ -411,6 +451,35 @@ func bootstrapNode() (string, bool) {
 func bootstrapProfile() (string, bool) {
 	if v := normalizeToken(os.Getenv("INFRAGO_PROFILE")); v != "" {
 		return v, true
+	}
+	return "", false
+}
+
+func bootstrapRole() (string, bool) {
+	if v := normalizeToken(os.Getenv("INFRAGO_ROLE")); v != "" {
+		return v, true
+	}
+
+	args := os.Args[1:]
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if !strings.HasPrefix(arg, "--") {
+			continue
+		}
+		kv := strings.TrimPrefix(arg, "--")
+		if strings.HasPrefix(kv, "role=") {
+			v := normalizeToken(strings.TrimSpace(strings.TrimPrefix(kv, "role=")))
+			if v != "" {
+				return v, true
+			}
+			continue
+		}
+		if kv == "role" && i+1 < len(args) {
+			v := normalizeToken(strings.TrimSpace(args[i+1]))
+			if v != "" && !strings.HasPrefix(v, "--") {
+				return v, true
+			}
+		}
 	}
 	return "", false
 }
