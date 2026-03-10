@@ -1,6 +1,8 @@
 package infra
 
 import (
+	"time"
+
 	. "github.com/infrago/base"
 )
 
@@ -97,6 +99,20 @@ func Invoke(name string, values ...Map) (Map, Res) {
 		value = values[0]
 	}
 	return core.Invoke(nil, name, value)
+}
+
+// Execute executes one local method only.
+func Execute(name string, values ...Map) (Map, Res) {
+	var value Map
+	if len(values) > 0 {
+		value = values[0]
+	}
+	return core.Execute(nil, name, value)
+}
+
+// Request executes one remote service call only.
+func Request(name string, value Map, timeout ...time.Duration) (Map, Res) {
+	return core.Request(nil, name, value, timeout...)
 }
 
 // InvokeList executes one entry and returns response data with parsed "items" list.
@@ -244,9 +260,9 @@ func invokeTotal(data Map) (int64, bool) {
 	}
 }
 
-// Enqueue dispatches one async queued service request.
-func Enqueue(name string, value Map) error {
-	return hook.Enqueue(name, value)
+// Dispatch dispatches one async queued service request.
+func Dispatch(name string, value Map) error {
+	return hook.Dispatch(name, value)
 }
 
 // Broadcast dispatches one async event to all subscribers.
@@ -254,9 +270,19 @@ func Broadcast(name string, value Map) error {
 	return hook.Broadcast(name, value)
 }
 
-// Publish dispatches one async event (currently same behavior as Broadcast).
+// Rolecast dispatches one async event to one node per role group.
+func Rolecast(name string, value Map) error {
+	return hook.Rolecast(name, value)
+}
+
+// Enqueue is compatibility alias of Dispatch.
+func Enqueue(name string, value Map) error {
+	return Dispatch(name, value)
+}
+
+// Publish is compatibility alias of Rolecast.
 func Publish(name string, value Map) error {
-	return hook.Publish(name, value)
+	return Rolecast(name, value)
 }
 
 func normalizeProfiles(profile ...string) []string {

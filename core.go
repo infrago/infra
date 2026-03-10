@@ -26,6 +26,7 @@ type (
 		kind   string
 		span   string
 		target string
+		retry  []time.Duration
 
 		Name     string
 		Desc     string
@@ -40,7 +41,11 @@ type (
 const (
 	coreKindMethod  = "method"
 	coreKindService = "service"
+	coreKindMessage = "message"
 	coreKindTrigger = "trigger"
+
+	dispatchAttemptSetting = "_dispatch_attempt"
+	dispatchFinalSetting   = "_dispatch_final"
 )
 
 type (
@@ -62,6 +67,17 @@ type (
 		Args     Vars
 		Data     Vars
 		Action   Any
+		Retry    []time.Duration
+		Setting  Map
+	}
+	Messages map[string]Message
+	Message  struct {
+		Name     string
+		Desc     string
+		Nullable bool
+		Args     Vars
+		Data     Vars
+		Action   Any
 		Setting  Map
 	}
 )
@@ -72,10 +88,14 @@ func (e *coreModule) Register(name string, value Any) {
 		e.RegisterMethod(name, v)
 	case Service:
 		e.RegisterService(name, v)
+	case Message:
+		e.RegisterMessage(name, v)
 	case Methods:
 		e.RegisterMethods(name, v)
 	case Services:
 		e.RegisterServices(name, v)
+	case Messages:
+		e.RegisterMessages(name, v)
 	}
 }
 
@@ -96,6 +116,16 @@ func (e *coreModule) RegisterServices(prefix string, services Services) {
 			name = prefix + "." + key
 		}
 		e.RegisterService(name, service)
+	}
+}
+
+func (e *coreModule) RegisterMessages(prefix string, messages Messages) {
+	for key, message := range messages {
+		name := key
+		if prefix != "" {
+			name = prefix + "." + key
+		}
+		e.RegisterMessage(name, message)
 	}
 }
 
@@ -141,12 +171,39 @@ func (e *coreModule) RegisterService(name string, service Service) {
 		kind:     coreKindService,
 		span:     "service:" + name,
 		target:   name,
+		retry:    cloneDurations(service.Retry),
 		Name:     name,
 		Desc:     service.Desc,
 		Nullable: service.Nullable,
 		Args:     service.Args,
 		Data:     service.Data,
 		Action:   service.Action,
+		Setting:  service.Setting,
+	}
+}
+
+func (e *coreModule) RegisterMessage(name string, message Message) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
+	if name == "" {
+		return
+	}
+	if _, ok := e.entries[name]; ok {
+		panic("message already registered: " + name)
+	}
+	e.entries[name] = coreEntry{
+		remote:   false,
+		kind:     coreKindMessage,
+		span:     "message:" + name,
+		target:   name,
+		Name:     name,
+		Desc:     message.Desc,
+		Nullable: message.Nullable,
+		Args:     message.Args,
+		Data:     message.Data,
+		Action:   message.Action,
+		Setting:  message.Setting,
 	}
 }
 
@@ -178,6 +235,17 @@ func (e *coreModule) registerTriggerMethod(methodName, triggerName string, cfg T
 			}
 		},
 	}
+}
+
+func (e *coreModule) dispatchRetries(name string) []time.Duration {
+	e.mutex.RLock()
+	defer e.mutex.RUnlock()
+
+	entry, ok := e.entries[name]
+	if !ok || entry.kind != coreKindService || len(entry.retry) == 0 {
+		return nil
+	}
+	return cloneDurations(entry.retry)
 }
 
 func (e *coreModule) Config(Map) {}
@@ -252,14 +320,64 @@ func (e *coreModule) Invoke(meta *Meta, name string, value Map, settings ...Map)
 	return data, res
 }
 
+// Execute calls only local method, and never falls back to remote bus.
+func (e *coreModule) Execute(meta *Meta, name string, value Map, settings ...Map) (Map, Res) {
+	if meta == nil {
+		meta = NewMeta()
+	}
+	span := meta.Begin("method:"+name, TraceAttrs("infrago", coreKindMethod, name, Map{
+		"module":    "core",
+		"operation": "execute",
+	}))
+	data, res, ok := e.invokeLocalWithKinds(meta, name, value, []string{coreKindMethod}, settings...)
+	if !ok {
+		res = Fail.With("method not found: " + name)
+	}
+	if res != nil && res.Fail() {
+		span.End(res)
+	} else {
+		span.End()
+	}
+	return data, res
+}
+
+// Request always calls remote service through bus, regardless of local entries.
+func (e *coreModule) Request(meta *Meta, name string, value Map, timeout ...time.Duration) (Map, Res) {
+	if meta == nil {
+		meta = NewMeta()
+	}
+	span := meta.Begin("service:"+name, TraceAttrs("infrago", coreKindService, name, Map{
+		"module":    "core",
+		"operation": "request",
+	}))
+	waitTimeout := defaultCallTimeout
+	if len(timeout) > 0 && timeout[0] > 0 {
+		waitTimeout = timeout[0]
+	}
+	data, res := hook.Request(meta, name, value, waitTimeout)
+	if res != nil && res.Fail() {
+		span.End(res)
+	} else {
+		span.End()
+	}
+	return data, res
+}
+
 // localInvoke only calls local method/service, does not go through bus.
 // Returns (data, res, found) where found indicates if local entry exists.
 func (e *coreModule) invokeLocal(meta *Meta, name string, value Map, settings ...Map) (Map, Res, bool) {
+	return e.invokeLocalWithKinds(meta, name, value, nil, settings...)
+}
+
+func (e *coreModule) invokeLocalWithKinds(meta *Meta, name string, value Map, kinds []string, settings ...Map) (Map, Res, bool) {
 	e.mutex.RLock()
 	entry, ok := e.entries[name]
 	e.mutex.RUnlock()
 
 	if !ok || entry.Action == nil {
+		return nil, nil, false
+	}
+	if len(kinds) > 0 && !containsString(kinds, entry.kind) {
 		return nil, nil, false
 	}
 
@@ -293,6 +411,11 @@ func (e *coreModule) invokeLocal(meta *Meta, name string, value Map, settings ..
 			ctx.Setting[k] = v
 		}
 	}
+	ctx.attempt = coreSettingInt(ctx.Setting[dispatchAttemptSetting], 1)
+	ctx.final = coreSettingBool(ctx.Setting[dispatchFinalSetting], false)
+	delete(ctx.Setting, dispatchAttemptSetting)
+	delete(ctx.Setting, dispatchFinalSetting)
+
 	data, res := invokeAction(entry.Action, ctx)
 	if len(entry.Data) > 0 && (res == nil || !res.Fail()) && data != nil {
 		mapped := Map{}
@@ -400,4 +523,52 @@ func defaultResult(res Res) Res {
 		return OK
 	}
 	return res
+}
+
+func containsString(items []string, target string) bool {
+	for _, item := range items {
+		if item == target {
+			return true
+		}
+	}
+	return false
+}
+
+func cloneDurations(in []time.Duration) []time.Duration {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]time.Duration, 0, len(in))
+	for _, item := range in {
+		if item > 0 {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+func coreSettingInt(v Any, fallback int) int {
+	switch vv := v.(type) {
+	case int:
+		if vv > 0 {
+			return vv
+		}
+	case int64:
+		if vv > 0 {
+			return int(vv)
+		}
+	case float64:
+		if vv > 0 {
+			return int(vv)
+		}
+	}
+	return fallback
+}
+
+func coreSettingBool(v Any, fallback bool) bool {
+	switch vv := v.(type) {
+	case bool:
+		return vv
+	}
+	return fallback
 }

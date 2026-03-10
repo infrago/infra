@@ -20,7 +20,7 @@ type defaultConfigHook struct{}
 type defaultTraceHook struct{}
 
 func (h *defaultBusHook) Request(meta *Meta, name string, value base.Map, _ time.Duration) (base.Map, base.Res) {
-	data, res, ok := core.invokeLocal(meta, name, value)
+	data, res, ok := core.invokeLocalWithKinds(meta, name, value, []string{coreKindService})
 	if ok {
 		return data, res
 	}
@@ -28,18 +28,55 @@ func (h *defaultBusHook) Request(meta *Meta, name string, value base.Map, _ time
 }
 
 func (h *defaultBusHook) Broadcast(meta *Meta, name string, value base.Map) error {
-	_, _, _ = core.invokeLocal(meta, name, value)
+	_, _, _ = core.invokeLocalWithKinds(meta, name, value, []string{coreKindMessage})
+	return nil
+}
+
+func (h *defaultBusHook) Rolecast(meta *Meta, name string, value base.Map) error {
+	_, _, _ = core.invokeLocalWithKinds(meta, name, value, []string{coreKindMessage})
+	return nil
+}
+
+func (h *defaultBusHook) Dispatch(meta *Meta, name string, value base.Map) error {
+	retries := core.dispatchRetries(name)
+	go h.dispatchService(meta, name, value, retries, 1)
 	return nil
 }
 
 func (h *defaultBusHook) Publish(meta *Meta, name string, value base.Map) error {
-	_, _, _ = core.invokeLocal(meta, name, value)
-	return nil
+	return h.Rolecast(meta, name, value)
 }
 
 func (h *defaultBusHook) Enqueue(meta *Meta, name string, value base.Map) error {
-	go core.invokeLocal(meta, name, value)
-	return nil
+	return h.Dispatch(meta, name, value)
+}
+
+func (h *defaultBusHook) dispatchService(meta *Meta, name string, value base.Map, retries []time.Duration, attempt int) {
+	if attempt <= 0 {
+		attempt = 1
+	}
+
+	localMeta := NewMeta()
+	if meta != nil {
+		localMeta.Metadata(meta.Metadata())
+	}
+
+	setting := base.Map{
+		dispatchAttemptSetting: attempt,
+		dispatchFinalSetting:   dispatchFinal(retries, attempt),
+	}
+	_, res, found := core.invokeLocalWithKinds(localMeta, name, value, []string{coreKindService}, setting)
+	if !found || !dispatchRetryableResult(res) {
+		return
+	}
+
+	delay, ok := dispatchRetryDelay(retries, attempt)
+	if !ok {
+		return
+	}
+	time.AfterFunc(delay, func() {
+		h.dispatchService(meta, name, value, retries, attempt+1)
+	})
 }
 
 func (h *defaultBusHook) Stats() []ServiceStats {
@@ -66,6 +103,48 @@ func (h *defaultConfigHook) LoadConfig() (base.Map, error) {
 		return nil, errors.New("Unknown config driver: " + drvName)
 	}
 	return loadConfigFromFile(params)
+}
+
+func dispatchRetryableResult(res base.Res) bool {
+	if IsRetry(res) {
+		return true
+	}
+	if res == nil || !res.Fail() {
+		return false
+	}
+	switch res.Status() {
+	case Invalid.Status(), Denied.Status(), Unsigned.Status(), Unauthed.Status():
+		return false
+	}
+	return true
+}
+
+func dispatchFinal(retries []time.Duration, attempt int) bool {
+	if len(retries) == 0 {
+		return false
+	}
+	if attempt <= 0 {
+		attempt = 1
+	}
+	return attempt > len(retries)
+}
+
+func dispatchRetryDelay(retries []time.Duration, attempt int) (time.Duration, bool) {
+	if len(retries) == 0 {
+		return 0, false
+	}
+	if attempt <= 0 {
+		attempt = 1
+	}
+	idx := attempt - 1
+	if idx >= len(retries) {
+		return 0, false
+	}
+	delay := retries[idx]
+	if delay <= 0 {
+		delay = time.Second
+	}
+	return delay, true
 }
 
 func (h *defaultTraceHook) Begin(_ *Meta, _ string, _ base.Map) TraceSpan {

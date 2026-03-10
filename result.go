@@ -10,7 +10,7 @@ import (
 var (
 	OK       = Result(0, "ok", "成功")
 	Fail     = Result(1, "fail", "失败")
-	Retry    = Result(2, "retry", "重试")
+	Retry    = Result(2, "retry", "重试").Retry()
 	Invalid  = Result(3, "invalid", "无效请求或数据")
 	Denied   = Result(4, "denied", "拒绝访问")
 	Unsigned = Result(5, "unsigned", "无权访问")
@@ -67,9 +67,24 @@ func (res *result) Args() []Any {
 // 因为result都是预先定义好的，所以如果直接修改args，会修改本来已经定义好的result
 func (res *result) With(args ...Any) Res {
 	if len(args) > 0 {
-		return &result{res.code, res.status, args, false}
+		return &result{res.code, res.status, args, res.retry}
 	}
 	return res
+}
+
+func (res *result) Retry(flags ...bool) Res {
+	retry := true
+	if len(flags) > 0 {
+		retry = flags[0]
+	}
+	return &result{res.code, res.status, res.args, retry}
+}
+
+func (res *result) Retriable() bool {
+	if res == nil {
+		return false
+	}
+	return res.retry
 }
 
 // Error
@@ -110,6 +125,32 @@ func errorResult(err error) Res {
 // ErrorResult exposes error-to-Res conversion.
 func ErrorResult(err error) Res {
 	return errorResult(err)
+}
+
+// RetryResult marks one result as retryable and optionally overrides message args.
+func RetryResult(res Res, args ...Any) Res {
+	if res == nil {
+		res = Fail
+	}
+	if len(args) > 0 {
+		res = res.With(args...)
+	}
+	return res.Retry()
+}
+
+// IsRetry reports whether one result is marked as retryable.
+func IsRetry(res Res) bool {
+	if res == nil {
+		return false
+	}
+	if res.Retriable() {
+		return true
+	}
+	// compatibility with external Res implementations without retry flag support.
+	if res == Retry {
+		return true
+	}
+	return res.Status() == Retry.Status()
 }
 
 // Result 定义一个result，并自动注册status

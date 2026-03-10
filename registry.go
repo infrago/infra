@@ -63,6 +63,14 @@ func (Services) RegistryComponent() string {
 	return "service"
 }
 
+func (Message) RegistryComponent() string {
+	return "message"
+}
+
+func (Messages) RegistryComponent() string {
+	return "message"
+}
+
 func (Trigger) RegistryComponent() string {
 	return "trigger"
 }

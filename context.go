@@ -445,6 +445,46 @@ func (m *Meta) Invoke(name string, values ...Map) Map {
 	return data
 }
 
+// Execute calls local method only.
+func (m *Meta) Execute(name string, values ...Map) Map {
+	var value Map
+	if len(values) > 0 {
+		value = values[0]
+	}
+	data, res := core.Execute(m, name, value)
+	m.result = res
+	return data
+}
+
+// Request calls remote service only.
+func (m *Meta) Request(name string, value Map, timeout ...time.Duration) Map {
+	data, res := core.Request(m, name, value, timeout...)
+	m.result = res
+	return data
+}
+
+func (m *Meta) Dispatch(name string, value Map) error {
+	return hook.Dispatch(name, value, m)
+}
+
+func (m *Meta) Broadcast(name string, value Map) error {
+	return hook.Broadcast(name, value, m)
+}
+
+func (m *Meta) Rolecast(name string, value Map) error {
+	return hook.Rolecast(name, value, m)
+}
+
+// Enqueue is compatibility alias of Dispatch.
+func (m *Meta) Enqueue(name string, value Map) error {
+	return m.Dispatch(name, value)
+}
+
+// Publish is compatibility alias of Rolecast.
+func (m *Meta) Publish(name string, value Map) error {
+	return m.Rolecast(name, value)
+}
+
 // InvokeList executes one call and also returns parsed "items" list from response data.
 func (m *Meta) InvokeList(name string, values ...Map) (Map, []Map) {
 	data := m.Invoke(name, values...)
@@ -512,4 +552,21 @@ type Context struct {
 	Setting Map
 	Value   Map
 	Args    Map
+
+	attempt int
+	final   bool
+}
+
+func (ctx *Context) Attempts() int {
+	if ctx == nil || ctx.attempt <= 0 {
+		return 1
+	}
+	return ctx.attempt
+}
+
+func (ctx *Context) Final() bool {
+	if ctx == nil {
+		return false
+	}
+	return ctx.final
 }

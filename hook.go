@@ -34,6 +34,10 @@ type (
 	BusHook interface {
 		Request(meta *Meta, name string, value base.Map, timeout time.Duration) (base.Map, base.Res)
 		Broadcast(meta *Meta, name string, value base.Map) error
+		Rolecast(meta *Meta, name string, value base.Map) error
+		Dispatch(meta *Meta, name string, value base.Map) error
+
+		// compatibility aliases
 		Publish(meta *Meta, name string, value base.Map) error
 		Enqueue(meta *Meta, name string, value base.Map) error
 		Stats() []ServiceStats
@@ -136,31 +140,49 @@ func (h *infragoHook) Request(meta *Meta, name string, value base.Map, timeout t
 	return h.bus.Request(meta, name, value, timeout)
 }
 
-func (h *infragoHook) Broadcast(name string, value base.Map) error {
+func (h *infragoHook) Broadcast(name string, value base.Map, meta ...*Meta) error {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
 		return errBusHookMissing
 	}
-	return h.bus.Broadcast(nil, name, value)
+	return h.bus.Broadcast(pickMeta(meta...), name, value)
 }
 
-func (h *infragoHook) Publish(name string, value base.Map) error {
+func (h *infragoHook) Rolecast(name string, value base.Map, meta ...*Meta) error {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
 		return errBusHookMissing
 	}
-	return h.bus.Publish(nil, name, value)
+	return h.bus.Rolecast(pickMeta(meta...), name, value)
 }
 
-func (h *infragoHook) Enqueue(name string, value base.Map) error {
+func (h *infragoHook) Dispatch(name string, value base.Map, meta ...*Meta) error {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
 		return errBusHookMissing
 	}
-	return h.bus.Enqueue(nil, name, value)
+	return h.bus.Dispatch(pickMeta(meta...), name, value)
+}
+
+func (h *infragoHook) Publish(name string, value base.Map, meta ...*Meta) error {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.bus == nil {
+		return errBusHookMissing
+	}
+	return h.bus.Publish(pickMeta(meta...), name, value)
+}
+
+func (h *infragoHook) Enqueue(name string, value base.Map, meta ...*Meta) error {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	if h.bus == nil {
+		return errBusHookMissing
+	}
+	return h.bus.Enqueue(pickMeta(meta...), name, value)
 }
 
 func (h *infragoHook) Stats() []ServiceStats {
@@ -247,3 +269,10 @@ func (h *infragoHook) RevokeTokenID(tokenID string, expires int64) error {
 type noopTraceSpan struct{}
 
 func (noopTraceSpan) End(...base.Any) {}
+
+func pickMeta(items ...*Meta) *Meta {
+	if len(items) == 0 {
+		return nil
+	}
+	return items[0]
+}
