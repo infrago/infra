@@ -280,7 +280,7 @@ func defaultTokenHMACSign(data string, key string) (string, error) {
 	if _, err := hasher.Write([]byte(data)); err != nil {
 		return "", err
 	}
-	return base64.URLEncoding.EncodeToString(hasher.Sum(nil)), nil
+	return base64.RawURLEncoding.EncodeToString(hasher.Sum(nil)), nil
 }
 
 func defaultTokenHMACVerify(data, sign, key string) bool {
