@@ -517,7 +517,7 @@ func (m *Meta) Invokes(name string, values ...Map) []Map {
 }
 
 // Invoking executes one call and returns paged items from response.
-func (m *Meta) Invoking(name string, offset, limit int, values ...Map) (int64, []Map) {
+func (m *Meta) Invoking(name string, offset, limit int64, values ...Map) (int64, []Map) {
 	data := m.Invoke(name, values...)
 	items := invokeItems(data)
 	if total, ok := invokeTotal(data); ok {

@@ -128,7 +128,7 @@ func Invokes(name string, values ...Map) ([]Map, Res) {
 }
 
 // Invoking executes one entry and returns paged items with total count.
-func Invoking(name string, offset, limit int, values ...Map) (int64, []Map) {
+func Invoking(name string, offset, limit int64, values ...Map) (int64, []Map) {
 	data, _ := Invoke(name, values...)
 	items := invokeItems(data)
 	if total, ok := invokeTotal(data); ok {
@@ -153,24 +153,25 @@ func InvokeFail(name string, values ...Map) bool {
 	return !InvokeOK(name, values...)
 }
 
-func normalizeInvokeWindow(total, offset, limit int) (int, int) {
+func normalizeInvokeWindow(total int, offset, limit int64) (int, int) {
 	if total <= 0 {
 		return 0, 0
 	}
+	total64 := int64(total)
 	if offset < 0 {
 		offset = 0
 	}
-	if offset >= total {
+	if offset >= total64 {
 		return total, total
 	}
-	end := total
+	end := total64
 	if limit > 0 {
 		end = offset + limit
-		if end > total {
-			end = total
+		if end > total64 {
+			end = total64
 		}
 	}
-	return offset, end
+	return int(offset), int(end)
 }
 
 func invokeItems(data Map) []Map {

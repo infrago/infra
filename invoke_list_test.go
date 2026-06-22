@@ -197,6 +197,38 @@ func TestInvokingPagesReturnedItems(t *testing.T) {
 	}
 }
 
+func TestInvokingUsesInt64Window(t *testing.T) {
+	originalCore := core
+	core = &coreModule{
+		entries: map[string]coreEntry{
+			"demo.page64": {
+				Action: func(*Context) []Map {
+					return []Map{{"id": 1}, {"id": 2}, {"id": 3}}
+				},
+			},
+		},
+	}
+	defer func() {
+		core = originalCore
+	}()
+
+	total, items := Invoking("demo.page64", int64(1), int64(2))
+	if total != 3 {
+		t.Fatalf("expected total=3, got %d", total)
+	}
+	if len(items) != 2 || items[0]["id"] != 2 || items[1]["id"] != 3 {
+		t.Fatalf("unexpected int64 paged items: %#v", items)
+	}
+
+	total, items = Invoking("demo.page64", int64(1<<62), int64(10))
+	if total != 3 {
+		t.Fatalf("expected total=3 for large offset, got %d", total)
+	}
+	if len(items) != 0 {
+		t.Fatalf("expected empty items for large offset, got %#v", items)
+	}
+}
+
 func TestInvokeListSupportsActionReturnItemsAndRes(t *testing.T) {
 	originalCore := core
 	core = &coreModule{
