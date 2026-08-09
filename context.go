@@ -411,6 +411,16 @@ func (m *Meta) Result(res ...Res) Res {
 	return ret
 }
 
+// ResultOK reports whether the pending result succeeded without consuming it.
+func (m *Meta) ResultOK() bool {
+	return m.result == nil || m.result.OK()
+}
+
+// ResultFail reports whether the pending result failed without consuming it.
+func (m *Meta) ResultFail() bool {
+	return !m.ResultOK()
+}
+
 func (m *Meta) Metadata(data ...Metadata) Metadata {
 	if len(data) > 0 {
 		d := data[0]
