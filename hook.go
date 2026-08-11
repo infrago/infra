@@ -25,10 +25,12 @@ type (
 	infragoHook struct {
 		mutex sync.RWMutex
 
-		bus    BusHook
-		config ConfigHook
-		trace  TraceHook
-		token  TokenHook
+		bus         BusHook
+		config      ConfigHook
+		log         LogHook
+		logFallback LogHook
+		trace       TraceHook
+		token       TokenHook
 	}
 
 	BusHook interface {
@@ -40,7 +42,7 @@ type (
 		// compatibility aliases
 		Publish(meta *Meta, name string, value base.Map) error
 		Enqueue(meta *Meta, name string, value base.Map) error
-		Stats() []ServiceStats
+		ServiceStats() []ServiceStats
 		ListNodes() []NodeInfo
 		ListServices() []ServiceInfo
 	}
@@ -64,6 +66,9 @@ type (
 
 // Attach dispatches Module.Attach based on type.
 func (h *infragoHook) Attach(value base.Any) {
+	if v, ok := value.(LogHook); ok {
+		h.AttachLog(v)
+	}
 	switch v := value.(type) {
 	case BusHook:
 		h.AttachBus(v)
@@ -74,6 +79,18 @@ func (h *infragoHook) Attach(value base.Any) {
 	case TokenHook:
 		h.AttachToken(v)
 	}
+}
+
+func (h *infragoHook) AttachLog(logger LogHook) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	if logger == nil {
+		panic("Invalid log hook")
+	}
+	if h.log == nil {
+		h.logFallback = logger
+	}
+	h.log = logger
 }
 
 func (h *infragoHook) AttachBus(hook BusHook) {
@@ -128,6 +145,19 @@ func (h *infragoHook) LoadConfig() (base.Map, error) {
 		return nil, errConfigHookMissing
 	}
 	return h.config.LoadConfig()
+}
+
+func (h *infragoHook) Log(entry LogEntry) {
+	h.mutex.RLock()
+	logger := h.log
+	fallback := h.logFallback
+	h.mutex.RUnlock()
+	if readiness, ok := logger.(interface{ Ready() bool }); ok && !readiness.Ready() && fallback != nil {
+		logger = fallback
+	}
+	if logger != nil {
+		logger.Log(entry)
+	}
 }
 
 // Request sends a bus request (main -> sub).
@@ -185,13 +215,13 @@ func (h *infragoHook) Enqueue(name string, value base.Map, meta ...*Meta) error 
 	return h.bus.Enqueue(pickMeta(meta...), name, value)
 }
 
-func (h *infragoHook) Stats() []ServiceStats {
+func (h *infragoHook) ServiceStats() []ServiceStats {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
 	if h.bus == nil {
 		return nil
 	}
-	return h.bus.Stats()
+	return h.bus.ServiceStats()
 }
 
 func (h *infragoHook) ListNodes() []NodeInfo {

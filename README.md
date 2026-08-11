@@ -11,6 +11,8 @@
 
 - 运行流程（`infra.Run()`）：`Load -> Config -> Setup -> Open -> Start -> Wait -> Stop -> Close`
 - 生命周期（模块接口）：`Setup -> Open -> Start -> Stop -> Close`
+- 统一可观测接口：所有模块实现 `Health() / Ready() / Stats()`
+- 结构化日志：统一使用 `infra.Log()` 或 `meta.Log()`
 - 统一启动：`infra.Run()`
 - 统一调用：`infra.Invoke()`
 - 自定义配置：`infra.Setting()`
@@ -30,6 +32,21 @@ import (
 func main() {
     infra.Run()
 }
+```
+
+模块内日志使用统一字段，`meta.Log` 会自动带上当前请求 ID 与 trace ID：
+
+```go
+infra.Log(infra.LogLevelInfo, "worker", "started", base.Map{"workers": 4})
+ctx.Meta.Log(infra.LogLevelWarning, "worker", "retry", base.Map{"attempt": 2})
+```
+
+运行时监控统一返回包含模块、节点、状态、就绪状态和采集时间的结构；模块专属指标位于 `metrics`：
+
+```go
+health := infra.Health()
+ready := infra.Ready()
+stats := infra.Stats()
 ```
 
 ```toml

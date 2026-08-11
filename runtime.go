@@ -135,6 +135,61 @@ func (c *infragoRuntime) Identity() infragoIdentity {
 	}
 }
 
+func (c *infragoRuntime) Health() []ModuleHealth {
+	c.mutex.RLock()
+	modules := append([]Module(nil), c.modules...)
+	started := c.startStatus
+	c.mutex.RUnlock()
+
+	items := make([]ModuleHealth, 0, len(modules))
+	for _, mod := range modules {
+		if monitor, ok := mod.(interface{ Health() ModuleHealth }); ok {
+			items = append(items, normalizeModuleHealth(monitor.Health()))
+			continue
+		}
+		items = append(items, NewModuleHealth(moduleMonitorName(mod), started, nil, Map{
+			"monitor": "lifecycle-fallback",
+		}))
+	}
+	sortModuleHealth(items)
+	return items
+}
+
+func (c *infragoRuntime) Ready() bool {
+	c.mutex.RLock()
+	modules := append([]Module(nil), c.modules...)
+	started := c.startStatus
+	c.mutex.RUnlock()
+	if !started {
+		return false
+	}
+	for _, mod := range modules {
+		if monitor, ok := mod.(interface{ Ready() bool }); ok && !monitor.Ready() {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *infragoRuntime) Stats() []ModuleStats {
+	c.mutex.RLock()
+	modules := append([]Module(nil), c.modules...)
+	c.mutex.RUnlock()
+
+	items := make([]ModuleStats, 0, len(modules))
+	for _, mod := range modules {
+		if monitor, ok := mod.(interface{ Stats() ModuleStats }); ok {
+			items = append(items, normalizeModuleStats(monitor.Stats()))
+			continue
+		}
+		items = append(items, NewModuleStats(moduleMonitorName(mod), true, Map{
+			"monitor": "lifecycle-fallback",
+		}))
+	}
+	sortModuleStats(items)
+	return items
+}
+
 // Mount attaches a module into the core lifecycle and returns a host for submodules.
 func (c *infragoRuntime) Mount(mod Module) Host {
 	c.mutex.Lock()
@@ -308,7 +363,9 @@ func (c *infragoRuntime) Start() {
 	trigger.Toggle(START)
 
 	project, role, profile, node := c.runtimeInfo()
-	fmt.Printf("infrago started: project=%s role=%s profile=%s node=%s\n", project, role, profile, node)
+	Log(LogLevelInfo, "infra", "runtime started", Map{
+		"project": project, "role": role, "profile": profile, "node": node,
+	})
 
 	c.startStatus = true
 }
@@ -342,7 +399,9 @@ func (c *infragoRuntime) Close() {
 	c.closeStatus = true
 	c.openStatus = false
 	c.setupStatus = false
-	fmt.Printf("infrago stopped: project=%s role=%s profile=%s node=%s\n", project, role, profile, node)
+	Log(LogLevelInfo, "infra", "runtime stopped", Map{
+		"project": project, "role": role, "profile": profile, "node": node,
+	})
 }
 
 // Wait blocks until system termination signal.

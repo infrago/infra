@@ -14,6 +14,7 @@ type (
 		mutex sync.RWMutex
 		ctx   context.Context
 
+		requestId    string
 		traceId      string
 		spanId       string
 		parentSpanId string
@@ -35,6 +36,7 @@ type (
 	}
 
 	Metadata struct {
+		RequestId    string `json:"rid,omitempty"`
 		TraceId      string `json:"tid,omitempty"`
 		SpanId       string `json:"sid,omitempty"`
 		ParentSpanId string `json:"psid,omitempty"`
@@ -52,7 +54,11 @@ type (
 )
 
 func NewMeta() *Meta {
-	return &Meta{ctx: context.Background(), spanStack: make([]metaSpanFrame, 0, 8)}
+	return &Meta{
+		ctx:       context.Background(),
+		requestId: GenerateTokenID(),
+		spanStack: make([]metaSpanFrame, 0, 8),
+	}
 }
 
 func (m *Meta) WithContext(ctx context.Context) *Meta {
@@ -68,6 +74,19 @@ func (m *Meta) Context() context.Context {
 		return context.Background()
 	}
 	return m.ctx
+}
+
+// RequestId gets or sets the request correlation id.
+func (m *Meta) RequestId(id ...string) string {
+	if len(id) > 0 {
+		if value := strings.TrimSpace(id[0]); value != "" {
+			m.requestId = value
+		}
+	}
+	if m.requestId == "" {
+		m.requestId = GenerateTokenID()
+	}
+	return m.requestId
 }
 
 func (m *Meta) TraceId(id ...string) string {
@@ -395,6 +414,9 @@ func (m *Meta) Result(res ...Res) Res {
 func (m *Meta) Metadata(data ...Metadata) Metadata {
 	if len(data) > 0 {
 		d := data[0]
+		if d.RequestId != "" {
+			m.requestId = d.RequestId
+		}
 		m.traceId = d.TraceId
 		m.spanId = d.SpanId
 		m.parentSpanId = d.ParentSpanId
@@ -407,6 +429,7 @@ func (m *Meta) Metadata(data ...Metadata) Metadata {
 	}
 
 	return Metadata{
+		RequestId:    m.RequestId(),
 		TraceId:      m.traceId,
 		SpanId:       m.spanId,
 		ParentSpanId: m.parentSpanId,

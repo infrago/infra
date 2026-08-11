@@ -79,7 +79,7 @@ func (h *defaultBusHook) dispatchService(meta *Meta, name string, value base.Map
 	})
 }
 
-func (h *defaultBusHook) Stats() []ServiceStats {
+func (h *defaultBusHook) ServiceStats() []ServiceStats {
 	return nil
 }
 

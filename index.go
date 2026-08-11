@@ -43,9 +43,19 @@ func Prepare(profile ...string) {
 	infrago.Open()
 }
 
-// Ready is an alias of Prepare for compatibility.
-func Ready(profile ...string) {
-	Prepare(profile...)
+// Ready reports whether the runtime and every mounted module can serve work.
+func Ready() bool {
+	return infrago.Ready()
+}
+
+// Health returns the health of every mounted module in stable module order.
+func Health() []ModuleHealth {
+	return infrago.Health()
+}
+
+// Stats returns comparable statistics envelopes for every mounted module.
+func Stats() []ModuleStats {
+	return infrago.Stats()
 }
 
 // Run starts the full lifecycle and blocks until stop.

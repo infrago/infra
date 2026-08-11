@@ -9,6 +9,7 @@ func init() {
 
 	hook.AttachBus(&defaultBusHook{})
 	hook.AttachConfig(&defaultConfigHook{})
+	hook.AttachLog(newDefaultLogHook())
 	hook.AttachTrace(&defaultTraceHook{})
 	hook.AttachToken(newDefaultTokenHook())
 }
