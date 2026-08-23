@@ -3,6 +3,7 @@ package infra
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -194,7 +195,10 @@ func parseConfigEnv() base.Map {
 		if !strings.HasPrefix(key, "INFRAGO_") {
 			continue
 		}
-		k := strings.ToLower(strings.TrimPrefix(key, "INFRAGO_"))
+		if strings.TrimSpace(val) == "" {
+			continue
+		}
+		k := normalizeConfigParamKey(strings.TrimPrefix(key, "INFRAGO_"))
 		params[k] = val
 	}
 	return params
@@ -205,9 +209,11 @@ func parseConfigArgs() base.Map {
 	params := base.Map{}
 
 	if len(args) == 1 {
-		params["driver"] = DEFAULT
-		params["file"] = args[0]
-		return params
+		if isConfigFileArg(args[0]) {
+			params["driver"] = DEFAULT
+			params["file"] = args[0]
+			return params
+		}
 	}
 
 	for i := 0; i < len(args); i++ {
@@ -224,17 +230,55 @@ func parseConfigArgs() base.Map {
 		}
 		if strings.Contains(kv, "=") {
 			parts := strings.SplitN(kv, "=", 2)
-			params[strings.ToLower(parts[0])] = parts[1]
+			params[normalizeConfigParamKey(parts[0])] = parts[1]
 			continue
 		}
 		if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
-			params[strings.ToLower(kv)] = args[i+1]
+			params[normalizeConfigParamKey(kv)] = args[i+1]
 			i++
 		} else {
-			params[strings.ToLower(kv)] = "true"
+			params[normalizeConfigParamKey(kv)] = "true"
 		}
 	}
 	return params
+}
+
+func normalizeConfigParamKey(key string) string {
+	key = strings.ToLower(strings.TrimSpace(key))
+	key = strings.ReplaceAll(key, "-", "_")
+	key = strings.ReplaceAll(key, ".", "_")
+	switch key {
+	case "config_driver":
+		return "driver"
+	case "config_file", "configfile":
+		return "file"
+	case "config_path", "configpath":
+		return "path"
+	case "config_addr", "redis_addr", "redisaddr":
+		return "addr"
+	case "redis_host":
+		return "host"
+	case "redis_server":
+		return "server"
+	case "redis_port":
+		return "port"
+	}
+	return key
+}
+
+func isConfigFileArg(arg string) bool {
+	arg = strings.TrimSpace(arg)
+	if arg == "" || strings.HasPrefix(arg, "-") {
+		return false
+	}
+	if _, err := os.Stat(arg); err == nil {
+		return true
+	}
+	switch strings.ToLower(filepath.Ext(arg)) {
+	case ".json", ".toml", ".tml", ".yaml", ".yml":
+		return true
+	}
+	return strings.ContainsAny(arg, `/\`)
 }
 
 func loadConfigFromFile(params base.Map) (base.Map, error) {
@@ -257,7 +301,7 @@ func loadConfigFromFile(params base.Map) (base.Map, error) {
 
 	data, err := os.ReadFile(file)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read config file %q: %w", file, err)
 	}
 	format, _ := params["format"].(string)
 	if format == "" {
@@ -293,6 +337,9 @@ func defaultConfigFile() string {
 
 func detectConfigFormat(data []byte) string {
 	str := strings.TrimSpace(string(data))
+	if str == "" {
+		return ""
+	}
 	if strings.HasPrefix(str, "{") || strings.HasPrefix(str, "[") {
 		return "json"
 	}
@@ -309,8 +356,13 @@ func detectConfigFormat(data []byte) string {
 }
 
 func decodeConfig(data []byte, format string) (base.Map, error) {
+	if strings.TrimSpace(string(data)) == "" {
+		return base.Map{}, nil
+	}
+
+	format = strings.ToLower(strings.TrimSpace(format))
 	var out base.Map
-	switch strings.ToLower(format) {
+	switch format {
 	case "json":
 		if err := json.Unmarshal(data, &out); err != nil {
 			return nil, err

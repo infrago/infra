@@ -27,10 +27,11 @@ type (
 
 		result Res
 
-		payload    Map
-		tokenId    string
-		tokenValid bool
-		tokenAuth  bool
+		payload      Map
+		tokenId      string
+		tokenExpires int64
+		tokenValid   bool
+		tokenAuth    bool
 
 		spanStack []metaSpanFrame
 	}
@@ -257,6 +258,7 @@ func (m *Meta) Verify(token string) error {
 	}
 
 	m.tokenId = session.TokenID
+	m.tokenExpires = session.Expires
 	m.payload = session.Payload
 	m.tokenAuth = session.Auth
 	m.tokenValid = true
@@ -294,6 +296,7 @@ func (m *Meta) SignAt(auth bool, payload Map, begin time.Time, expires ...time.D
 	}
 	m.token = token
 	m.tokenId = req.TokenID
+	m.tokenExpires = req.Expires
 	m.payload = req.Payload
 	m.tokenAuth = req.Auth
 	m.tokenValid = true
@@ -327,6 +330,7 @@ func (m *Meta) NewSignAt(auth bool, payload Map, begin time.Time, expires ...tim
 	}
 	m.token = token
 	m.tokenId = req.TokenID
+	m.tokenExpires = req.Expires
 	m.payload = req.Payload
 	m.tokenAuth = req.Auth
 	m.tokenValid = true
@@ -347,7 +351,7 @@ func tokenTimeWindow(begin time.Time, expires ...time.Duration) (int64, int64) {
 
 // RevokeToken revokes one raw token.
 func (m *Meta) RevokeToken(token string, expires ...int64) error {
-	exp := int64(0)
+	exp := m.defaultRevokeExpires(token, "")
 	if len(expires) > 0 {
 		exp = expires[0]
 	}
@@ -356,11 +360,21 @@ func (m *Meta) RevokeToken(token string, expires ...int64) error {
 
 // RevokeTokenID revokes one token id.
 func (m *Meta) RevokeTokenID(tokenID string, expires ...int64) error {
-	exp := int64(0)
+	exp := m.defaultRevokeExpires("", tokenID)
 	if len(expires) > 0 {
 		exp = expires[0]
 	}
 	return hook.RevokeTokenID(tokenID, exp)
+}
+
+// RevokeCurrentToken revokes the current raw token, defaulting to current token expiry.
+func (m *Meta) RevokeCurrentToken(expires ...int64) error {
+	return m.RevokeToken(m.token, expires...)
+}
+
+// RevokeCurrentTokenID revokes the current token id, defaulting to current token expiry.
+func (m *Meta) RevokeCurrentTokenID(expires ...int64) error {
+	return m.RevokeTokenID(m.tokenId, expires...)
 }
 
 // Signed returns whether token is valid.
@@ -388,6 +402,11 @@ func (m *Meta) TokenId() string {
 	return m.tokenId
 }
 
+// TokenExpires returns current token expiry as a Unix timestamp.
+func (m *Meta) TokenExpires() int64 {
+	return m.tokenExpires
+}
+
 // Payload returns token payload placeholder.
 func (m *Meta) Payload() Map {
 	if m.payload == nil {
@@ -409,6 +428,16 @@ func (m *Meta) Result(res ...Res) Res {
 	ret := m.result
 	m.result = nil
 	return ret
+}
+
+// ResultOK reports whether the pending result succeeded without consuming it.
+func (m *Meta) ResultOK() bool {
+	return m.result == nil || m.result.OK()
+}
+
+// ResultFail reports whether the pending result failed without consuming it.
+func (m *Meta) ResultFail() bool {
+	return !m.ResultOK()
 }
 
 func (m *Meta) Metadata(data ...Metadata) Metadata {
@@ -521,7 +550,7 @@ func (m *Meta) Invokes(name string, values ...Map) []Map {
 }
 
 // Invoking executes one call and returns paged items from response.
-func (m *Meta) Invoking(name string, offset, limit int, values ...Map) (int64, []Map) {
+func (m *Meta) Invoking(name string, offset, limit int64, values ...Map) (int64, []Map) {
 	data := m.Invoke(name, values...)
 	items := invokeItems(data)
 	if total, ok := invokeTotal(data); ok {
@@ -563,7 +592,21 @@ func (m *Meta) clearTokenState() {
 	m.tokenValid = false
 	m.tokenAuth = false
 	m.tokenId = ""
+	m.tokenExpires = 0
 	m.payload = nil
+}
+
+func (m *Meta) defaultRevokeExpires(token, tokenID string) int64 {
+	if m.tokenExpires <= 0 {
+		return 0
+	}
+	if token != "" && token == m.token {
+		return m.tokenExpires
+	}
+	if tokenID != "" && tokenID == m.tokenId {
+		return m.tokenExpires
+	}
+	return 0
 }
 
 // Context carries invocation data for method/service.
